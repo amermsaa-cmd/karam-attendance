@@ -134,8 +134,47 @@
     // بعض الأجهزة/المتصفحات، فيفشل navigator.geolocation دائماً حتى لو
     // كانت صلاحية الموقع مفعّلة على الجهاز والمتصفح فعلياً.
     // هذه الصفحة top-level حقيقية على نطاقكم الخاص، فتعمل بصلاحية الموقع
-    // بشكل طبيعي، وتتواصل مع نفس الباك إند (Attendance.gs) عبر fetch().
+    // بشكل طبيعي.
+    //
+    // التواصل مع الباك إند يتم عبر JSONP (تحميل <script>) وليس fetch():
+    // جوجل لا تضمن إرسال ترويسة CORS بشكل ثابت على كل الأجهزة/المتصفحات
+    // لردود Apps Script (لاحظنا هذا فعليًا: نجح على بعض الأجهزة وفشل على
+    // أخرى بنفس الرابط بالضبط). JSONP لا يعتمد على CORS إطلاقًا بحكم
+    // تصميمه، فيعمل بشكل موحّد على كل الأجهزة بدون استثناء.
     // ================================================================
+
+    let __jsonpSeq = 0;
+    function jsonpRequest(baseUrl, params) {
+      return new Promise(function (resolve, reject) {
+        const cbName = '__jsonp_cb_' + (__jsonpSeq++) + '_' + Date.now();
+        const fullParams = Object.assign({}, params, { callback: cbName });
+        const qs = new URLSearchParams(fullParams).toString();
+
+        const timeoutId = setTimeout(function () {
+          cleanup();
+          reject(new Error('انتهت مهلة الاتصال بالخادم'));
+        }, 25000);
+
+        function cleanup() {
+          clearTimeout(timeoutId);
+          delete window[cbName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        window[cbName] = function (data) {
+          cleanup();
+          resolve(data);
+        };
+
+        const script = document.createElement('script');
+        script.onerror = function () {
+          cleanup();
+          reject(new Error('تعذر الوصول للخادم'));
+        };
+        script.src = baseUrl + '?' + qs;
+        document.body.appendChild(script);
+      });
+    }
 
     // رابط الويب آب المنشور لمشروع الحضور (نفس ATTENDANCE_BASE_URL في Tasks.gs)
     // مهم: بعد تطبيق تعديل Tasks.gs، لازم يُعاد نشر (Deploy) نفس هذا الرابط
@@ -249,7 +288,7 @@
         return;
       }
       getLocationThen(function () {
-        const qs = new URLSearchParams({
+        jsonpRequest(API_BASE, {
           action: kind === 'in' ? 'checkin' : 'checkout',
           emp: EMP_ID,
           type: currentType,
@@ -257,9 +296,7 @@
           lat: coords.lat,
           lng: coords.lng,
           device: getDeviceInfo()
-        });
-        fetch(API_BASE + '?' + qs.toString())
-          .then(function (r) { return r.json(); })
+        })
           .then(function (res) {
             setLoading(false);
             showStatus(res.ok ? 'ok' : 'err', res.message || 'تم');
@@ -283,8 +320,7 @@
         showStatus('info', 'استغرق التحقق من حالتك وقتاً أطول من المعتاد. الزر ظاهر بشكل مبدئي — حدّث الصفحة لو لزم الأمر.');
       }, 8000);
 
-      fetch(API_BASE + '?' + new URLSearchParams({ action: 'attendanceStatus', emp: EMP_ID }).toString())
-        .then(function (r) { return r.json(); })
+      jsonpRequest(API_BASE, { action: 'attendanceStatus', emp: EMP_ID })
         .then(function (status) {
           if (settled) return;
           settled = true;
