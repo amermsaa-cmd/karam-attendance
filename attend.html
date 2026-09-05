@@ -189,24 +189,27 @@
     <iframe id="pane-tasks" class="pane"></iframe>
   </div>
 
+  <!-- قناة مخفية تمامًا: نستخدمها لإرسال تسجيل الحضور/الانصراف وفحص الحالة
+       دون أي خروج مرئي من الصفحة إطلاقًا. لا تحتاج صلاحية GPS (الموقع
+       يُلتقط في الصفحة الأصل قبل استخدامها)، فتحميل محتوى Apps Script
+       بداخلها آمن تمامًا (بنفس طريقة تبويب "مهامي اليومية" فوق). -->
+  <iframe id="hiddenChannel" style="display:none" aria-hidden="true"></iframe>
+
   <script>
     // ================================================================
-    // هذه الصفحة أصبحت الصفحة الرئيسية للموظف (بدل لوحة Hub.html على
-    // Apps Script). سبب نقل تبويب "الحضور والانصراف" إليها تحديدًا: صفحات
-    // Apps Script (script.google.com/.../exec) تُعرض دائمًا داخل iframe
-    // من تصميم جوجل نفسه (حتى لو فُتحت مباشرة/top-level)، وهذا الـ iframe
-    // لا يمرّر صلاحية GPS على بعض الأجهزة، فيفشل navigator.geolocation
-    // دائماً رغم تفعيل صلاحية الموقع فعليًا على الجهاز.
-    // هذه الصفحة top-level حقيقية على نطاقكم الخاص (GitHub Pages)، فتعمل
-    // صلاحية الموقع فيها بشكل طبيعي. أما "مهامي اليومية"/"التقرير"/"إدارة
-    // المهام" فلا تحتاج صلاحية موقع إطلاقًا، فلا مشكلة من عرضها بداخل
-    // iframe هنا (تمامًا كما كانت تعمل من قبل داخل Hub.html).
+    // هذه الصفحة هي الصفحة الرئيسية للموظف (بدل لوحة Hub.html على
+    // Apps Script). تبويب "الحضور والانصراف" محتوى حقيقي داخل هذه الصفحة
+    // نفسها (top-level على GitHub Pages)، عشان صلاحية GPS تفضل شغالة -
+    // في وضع "مثبت كتطبيق" (standalone/fullscreen) خصوصًا، أندرويد يطبّق
+    // قيودًا أشد على تفويض صلاحية الموقع داخل iframe متداخل من نطاق مختلف
+    // (Apps Script)، وهذا بالضبط سبب ظهور المشكلة أصلاً بعد تفعيل التثبيت.
     //
-    // تسجيل حضور/انصراف: يتم عبر تنقّل كامل (location.href) وليس
-        // fetch/JSONP، لأن ثبت عمليًا أن كل أنواع الطلبات الفرعية قابلة للحجب
-    // من جوجل على بعض الأجهزة بينما التنقّل الكامل للصفحة لا يخضع لهذا
-    // القيد إطلاقًا. جوجل هترجع صفحة تأكيد بسيطة فيها زر رجوع لهذه الصفحة
-    // (ظهورها لحظيًا أمر طبيعي ومتوقع، مش خطأ).
+    // تسجيل حضور/انصراف وفحص الحالة: يتمّان عبر iframe مخفي تمامًا
+    // (#hiddenChannel) + postMessage، بدون أي خروج مرئي من الصفحة أو
+    // تأثير على التبويبات إطلاقًا. هذا ممكن وآمن لأن هذا الـ iframe لا
+    // يحتاج صلاحية GPS أبدًا (الموقع يُلتقط في هذه الصفحة نفسها قبل إرساله)،
+    // وتحميل محتوى Apps Script داخل iframe يعمل بثبات دائمًا (كما هو الحال
+    // مع تبويب "مهامي اليومية") - المشكلة كانت فقط في صلاحية GPS تحديدًا.
     // ================================================================
 
     const API_BASE = 'https://script.google.com/macros/s/AKfycbwUsIteMnwV4j0uo0--eYbF5cGdcTjDm1mWaLVs3ZBQ7cmWKiE99gz_--D68aM0UAJN/exec';
@@ -340,6 +343,31 @@
       );
     }
 
+    // ==== القناة المخفية: إرسال/فحص عبر iframe + postMessage (بدون أي
+    // خروج مرئي من الصفحة أو اختفاء للتبويبات إطلاقًا) ====
+    const hiddenFrame = document.getElementById('hiddenChannel');
+    let submitTimeoutId = null;
+    let statusTimeoutId = null;
+
+    window.addEventListener('message', function (event) {
+      // نتحقق أن الرسالة قادمة فعلاً من قناتنا المخفية (وليس من أي مصدر آخر)
+      if (event.source !== hiddenFrame.contentWindow) return;
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+
+      if (data.type === 'attendanceStatus') {
+        if (statusTimeoutId) { clearTimeout(statusTimeoutId); statusTimeoutId = null; }
+        saveHasOpen(!!data.hasOpen);
+        applyButtons(!!data.hasOpen);
+      } else if (data.type === 'attendanceResult') {
+        if (submitTimeoutId) { clearTimeout(submitTimeoutId); submitTimeoutId = null; }
+        setLoading(false);
+        showStatus(data.ok ? 'ok' : 'err', data.message || (data.ok ? 'تم بنجاح' : 'حدث خطأ غير متوقع'));
+        saveHasOpen(!!data.hasOpen);
+        applyButtons(!!data.hasOpen);
+      }
+    });
+
     function doAction(kind) {
       if (kind === 'in' && currentType === 'تغطية' && !document.getElementById('coverSelect').value) {
         showStatus('err', 'يرجى اختيار الموظف الذي تريد تغطيته أولاً');
@@ -353,21 +381,29 @@
           coverFor: document.getElementById('coverSelect').value || '',
           lat: coords.lat,
           lng: coords.lng,
-          device: getDeviceInfo()
+          device: getDeviceInfo(),
+          embed: '1'
         });
         showStatus('info', 'جاري الإرسال...');
-        location.href = API_BASE + '?' + qs.toString();
+        setLoading(true);
+        if (submitTimeoutId) clearTimeout(submitTimeoutId);
+        submitTimeoutId = setTimeout(function () {
+          submitTimeoutId = null;
+          setLoading(false);
+          showStatus('err', 'تعذر تأكيد وصول الطلب للخادم. تأكد من الإنترنت وحاول مرة أخرى.');
+        }, 20000);
+        hiddenFrame.src = API_BASE + '?' + qs.toString();
       });
     }
 
     // ==== تحديد أي زر يظهر (حضور فقط أو انصراف فقط - أبدًا سويًا) ====
-    // الأسلوب القديم (JSONP لفحص الحالة) كان يفشل أحيانًا على بعض الأجهزة
-    // ويُظهر الزرين معًا كحل احتياطي - وهذا مرفوض تمامًا. الحل الموثوق
-    // 100%: نفس أسلوب التنقّل الكامل المستخدم للتسجيل نفسه. بعد كل عملية
-    // تسجيل، الرابط الراجع من Apps Script يحمل ?hasOpen=1/0 بشكل مؤكد،
-    // ونحتفظ بآخر حالة معروفة محليًا (localStorage) لعرضها فورًا بدون أي
-    // وميض أو طلب شبكة في كل مرة تُفتح فيها الصفحة لاحقًا. فقط أول مرة
-    // فتح إطلاقًا (بدون أي حالة محفوظة) تحتاج تنقّل قصير وتلقائي للتحقق.
+    // نعتمد أولاً على آخر حالة معروفة محليًا (localStorage) لعرضها فورًا
+    // بدون أي وميض، ثم نتحقق دائمًا من الخادم في الخلفية عبر القناة المخفية
+    // (بدون أي تأثير مرئي) لتحديث الحالة تلقائيًا - خصوصًا أول مرة تُفتح
+    // فيها الصفحة إطلاقًا. لو تعذّر التحقق خلال المهلة ولا توجد حالة محفوظة
+    // مسبقًا، نفترض "غير مسجل حضور" (الحالة الأكثر شيوعًا) - وأي محاولة
+    // تسجيل لاحقة تصحّح الحالة تلقائيًا فور وصول ردها، لأن الخادم نفسه هو
+    // مصدر الحقيقة دائمًا (لا يمكن أبدًا أن تظهر بيانات خاطئة بسبب هذا).
     const LS_KEY = 'karam_hasOpen_' + EMP_ID;
     function saveHasOpen(v) {
       try { localStorage.setItem(LS_KEY, v ? '1' : '0'); } catch (e) {}
@@ -382,21 +418,18 @@
     }
 
     function refreshMyStatus() {
-      const hasOpenParam = params.get('hasOpen');
-      if (hasOpenParam === '1' || hasOpenParam === '0') {
-        const val = hasOpenParam === '1';
-        saveHasOpen(val);
-        applyButtons(val);
-        return;
-      }
       const cached = loadHasOpen();
       if (cached === '1' || cached === '0') {
         applyButtons(cached === '1');
-        return;
       }
-      // أول فتح إطلاقًا بلا أي حالة محفوظة: تنقّل قصير وتلقائي للتحقق من
-      // الحالة الحقيقية، ثم رجوع فوري لهذه الصفحة مع ?hasOpen= في الرابط.
-      location.href = API_BASE + '?action=attendanceStatus&emp=' + encodeURIComponent(EMP_ID) + '&redirect=1';
+      if (statusTimeoutId) clearTimeout(statusTimeoutId);
+      statusTimeoutId = setTimeout(function () {
+        statusTimeoutId = null;
+        if (cached !== '1' && cached !== '0') {
+          applyButtons(false);
+        }
+      }, 8000);
+      hiddenFrame.src = API_BASE + '?action=attendanceStatus&emp=' + encodeURIComponent(EMP_ID) + '&embed=1&_=' + Date.now();
     }
 
     if (!EMP_ID) {
