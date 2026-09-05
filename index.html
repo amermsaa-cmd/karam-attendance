@@ -112,10 +112,7 @@
   } catch (e) {}
 
   var BASE = "https://script.google.com/macros/s/AKfycby9pN3RR-ATdwMad6A9YvwK1fGrvprZCaorcRDKP9PsVE0Qrv7eEpJDzCMHvyH7wuv7/exec";
-  // الموظفون (غير المدير) يفتحون مباشرة على صفحة الحضور والانصراف الجديدة
-  // (attend.html على نفس نطاق GitHub Pages) بدل لوحة Apps Script (Hub) -
-  // صفحة الحضور نفسها صارت فيها تبويب "مهامي اليومية" جوّاها.
-  var TARGET = isManager ? (BASE + "?view=manager") : (emp ? ("attend.html?emp=" + encodeURIComponent(emp)) : BASE);
+  var TARGET = isManager ? (BASE + "?view=manager") : (BASE + (emp ? ("?emp=" + encodeURIComponent(emp)) : ""));
 
   var navigated = false;
   function goNow() {
