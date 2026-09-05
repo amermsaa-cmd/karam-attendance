@@ -115,9 +115,26 @@
     navigator.serviceWorker.register('sw.js').catch(function () {});
   }
 
-  // إذا كان التطبيق مثبتاً بالفعل ومفتوحاً من الأيقونة، انتقل مباشرة بدون أي انتظار
-  var isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  // مفتاح تخزين محلي منفصل لكل موظف: بمجرد ما يتثبت التطبيق مرة واحدة، لا نعرض زر التثبيت مرة أخرى إطلاقاً
+  var STORAGE_KEY = 'karam_installed_emp_' + (emp || 'default');
+  function markInstalled() {
+    try { localStorage.setItem(STORAGE_KEY, '1'); } catch (e) {}
+  }
+  function wasInstalledBefore() {
+    try { return localStorage.getItem(STORAGE_KEY) === '1'; } catch (e) { return false; }
+  }
+
+  // إذا كان التطبيق مثبتاً بالفعل ومفتوحاً من الأيقونة، انتقل مباشرة بدون أي انتظار.
+  // نعتمد على أكثر من طريقة كشف معاً لأن كشف "standalone" وحده غير موثوق دائماً على أندرويد:
+  var isStandalone =
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+    (window.matchMedia && window.matchMedia('(display-mode: minimal-ui)').matches) ||
+    window.navigator.standalone === true ||
+    (document.referrer && document.referrer.indexOf('android-app://') === 0) ||
+    wasInstalledBefore();
+
   if (isStandalone) {
+    markInstalled();
     setTimeout(goNow, 200);
     return;
   }
@@ -126,6 +143,11 @@
   var dots = document.getElementById('dots');
   var installBtn = document.getElementById('installBtn');
   var installNote = document.getElementById('installNote');
+
+  // يتأكد هذا الحدث من نجاح التثبيت الفعلي (بغض النظر عن طريقته) ويسجّل ذلك دائماً
+  window.addEventListener('appinstalled', function () {
+    markInstalled();
+  });
 
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
@@ -142,7 +164,9 @@
       if (dots) dots.hidden = false;
       if (!deferredPrompt) { goNow(); return; }
       deferredPrompt.prompt();
-      deferredPrompt.userChoice.finally(function () {
+      deferredPrompt.userChoice.then(function (choice) {
+        if (choice && choice.outcome === 'accepted') markInstalled();
+      }).finally(function () {
         deferredPrompt = null;
         goNow();
       });
