@@ -350,8 +350,10 @@
     let statusTimeoutId = null;
 
     window.addEventListener('message', function (event) {
-      // نتحقق أن الرسالة قادمة فعلاً من قناتنا المخفية (وليس من أي مصدر آخر)
-      if (event.source !== hiddenFrame.contentWindow) return;
+      // ملاحظة: جوجل تُحمّل صفحات Apps Script داخل طبقة iframe داخلية
+      // إضافية من تصميمها (حتى داخل القناة المخفية عندنا)، فالرسالة تصل
+      // فعليًا من نافذة حفيدة (مش hiddenFrame.contentWindow مباشرة) - لذلك
+      // نتحقق من شكل البيانات المعروف بدل مطابقة المصدر بالضبط.
       const data = event.data;
       if (!data || typeof data !== 'object') return;
 
