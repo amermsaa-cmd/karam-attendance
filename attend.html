@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1e9e50">
+  <title>تسجيل الحضور</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      direction: rtl;
+      text-align: center;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 20px 16px;
+      min-height: 100vh;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px 20px;
+      max-width: 420px;
+      margin: 0 auto;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    h1 { font-size: 22px; margin: 0 0 4px; color: #222; }
+    .date-time { color: #888; font-size: 14px; margin-bottom: 20px; }
+
+    .toggle-group {
+      display: flex;
+      background: #eee;
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 14px;
+    }
+    .toggle-group button {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 10px 4px;
+      border-radius: 8px;
+      font-size: 15px;
+      cursor: pointer;
+      color: #555;
+    }
+    .toggle-group button.active {
+      background: #fff;
+      font-weight: bold;
+      color: #1a73e8;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+
+    select {
+      width: 100%;
+      padding: 12px;
+      font-size: 15px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      margin-bottom: 14px;
+      display: none;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 18px;
+      font-size: 18px;
+      font-weight: bold;
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+    .btn-in { background: #1e9e50; }
+    .btn-out { background: #d93025; }
+    .btn:disabled { background: #ccc; cursor: not-allowed; }
+
+    .status {
+      margin-top: 14px;
+      font-size: 14px;
+      padding: 10px;
+      border-radius: 10px;
+      display: none;
+      white-space: pre-line;
+      line-height: 1.6;
+    }
+    .status.ok { background: #e6f4ea; color: #1e6b34; display: block; }
+    .status.err { background: #fce8e6; color: #a50e0e; display: block; }
+    .status.info { background: #e8f0fe; color: #174ea6; display: block; }
+
+    .loader {
+      display: none;
+      margin: 10px auto;
+      width: 26px; height: 26px;
+      border: 3px solid #ddd;
+      border-top-color: #1a73e8;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 id="empNameHeading">...</h1>
+    <div class="date-time" id="clock"></div>
+
+    <div class="toggle-group" id="typeToggle">
+      <button type="button" class="active" data-type="عادي" onclick="selectType('عادي')">دوام عادي</button>
+      <button type="button" data-type="تغطية" onclick="selectType('تغطية')">تغطية</button>
+    </div>
+
+    <select id="coverSelect">
+      <option value="">اختر من تغطي...</option>
+    </select>
+
+    <div class="loader" id="loader" style="display:block"></div>
+
+    <button class="btn btn-in" id="btnIn" style="display:none" onclick="doAction('in')">🟢 تسجيل الحضور</button>
+    <button class="btn btn-out" id="btnOut" style="display:none" onclick="doAction('out')">🔴 تسجيل الانصراف</button>
+
+    <div class="status" id="statusBox"></div>
+  </div>
+
+  <script>
+    // ================================================================
+    // صفحة تسجيل حضور مستقلة تُستضاف خارج Apps Script (GitHub Pages).
+    // سبب وجودها: صفحات Apps Script (script.google.com/.../exec) تُعرض
+    // داخل iframe محكوم من جوجل لا يمرّر صلاحية GPS للمحتوى الداخلي على
+    // بعض الأجهزة/المتصفحات، فيفشل navigator.geolocation دائماً حتى لو
+    // كانت صلاحية الموقع مفعّلة على الجهاز والمتصفح فعلياً.
+    // هذه الصفحة top-level حقيقية على نطاقكم الخاص، فتعمل بصلاحية الموقع
+    // بشكل طبيعي، وتتواصل مع نفس الباك إند (Attendance.gs) عبر fetch().
+    // ================================================================
+
+    // رابط الويب آب المنشور لمشروع الحضور (نفس ATTENDANCE_BASE_URL في Tasks.gs)
+    // مهم: بعد تطبيق تعديل Tasks.gs، لازم يُعاد نشر (Deploy) نفس هذا الرابط
+    // بنسخة جديدة (New version) حتى تنعكس الإضافة.
+    const API_BASE = 'https://script.google.com/macros/s/AKfycbwUsIteMnwV4j0uo0--eYbF5cGdcTjDm1mWaLVs3ZBQ7cmWKiE99gz_--D68aM0UAJN/exec';
+
+    // نفس أسماء الموظفين المستخدمة في index.html — عدّل هنا لو أضفت/غيّرت موظفين
+    const EMP_NAMES = { '1': 'محمد', '2': 'مشتاق', '3': 'مجيد' };
+
+    const params = new URLSearchParams(location.search);
+    const EMP_ID = params.get('emp') || '';
+    const EMP_NAME = EMP_NAMES[EMP_ID] || 'موظف غير معروف';
+
+    document.title = 'حضور ' + EMP_NAME;
+    document.getElementById('empNameHeading').textContent = EMP_NAME;
+
+    // تعبئة قائمة "من تغطي" بكل الموظفين ما عدا الموظف الحالي
+    (function fillCoverSelect() {
+      const sel = document.getElementById('coverSelect');
+      Object.keys(EMP_NAMES).forEach(function (id) {
+        if (id === EMP_ID) return;
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = EMP_NAMES[id];
+        sel.appendChild(opt);
+      });
+    })();
+
+    let currentType = 'عادي';
+    let coords = null;
+
+    function selectType(t) {
+      currentType = t;
+      document.querySelectorAll('#typeToggle button').forEach(b => {
+        b.classList.toggle('active', b.dataset.type === t);
+      });
+      document.getElementById('coverSelect').style.display = (t === 'تغطية') ? 'block' : 'none';
+    }
+
+    function tickClock() {
+      const now = new Date();
+      document.getElementById('clock').textContent = now.toLocaleDateString('ar-EG') + ' - ' + now.toLocaleTimeString('ar-EG');
+    }
+    setInterval(tickClock, 1000);
+    tickClock();
+
+    function getDeviceInfo() {
+      return navigator.userAgent.substring(0, 120);
+    }
+
+    function showStatus(type, msg) {
+      const box = document.getElementById('statusBox');
+      box.className = 'status ' + type;
+      box.textContent = msg;
+    }
+
+    function setLoading(on) {
+      document.getElementById('loader').style.display = on ? 'block' : 'none';
+      document.getElementById('btnIn').disabled = on;
+      document.getElementById('btnOut').disabled = on;
+    }
+
+    function getLocationThen(callback) {
+      if (!navigator.geolocation) {
+        showStatus('err', 'المتصفح لا يدعم تحديد الموقع (GPS). لا يمكن التسجيل.');
+        return;
+      }
+      setLoading(true);
+      showStatus('info', 'جاري تحديد موقعك بدقة عالية...');
+
+      function fail(err) {
+        setLoading(false);
+        var msg;
+        if (err && err.code === 1) {
+          msg = 'تم رفض صلاحية الموقع. يرجى تفعيل صلاحية الموقع لهذا الموقع من إعدادات المتصفح والمحاولة مرة أخرى.';
+        } else if (err && err.code === 3) {
+          msg = 'استغرق تحديد الموقع وقتاً طويلاً. جرّب الوقوف بمكان مفتوح (بعيداً عن الجدران) ثم أعد المحاولة.';
+        } else {
+          msg = 'تعذر تحديد الموقع. يرجى تفعيل صلاحية الموقع (GPS) والمحاولة مرة أخرى.';
+        }
+        showStatus('err', msg);
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        function (pos) {
+          coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          callback();
+        },
+        function (err) {
+          if (err && err.code === 3) {
+            showStatus('info', 'إعادة المحاولة بدقة عادية...');
+            navigator.geolocation.getCurrentPosition(
+              function (pos) {
+                coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                callback();
+              },
+              fail,
+              { enableHighAccuracy: false, timeout: 15000, maximumAge: 30000 }
+            );
+          } else {
+            fail(err);
+          }
+        },
+        { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
+      );
+    }
+
+    function doAction(kind) {
+      if (kind === 'in' && currentType === 'تغطية' && !document.getElementById('coverSelect').value) {
+        showStatus('err', 'يرجى اختيار الموظف الذي تريد تغطيته أولاً');
+        return;
+      }
+      getLocationThen(function () {
+        const qs = new URLSearchParams({
+          action: kind === 'in' ? 'checkin' : 'checkout',
+          emp: EMP_ID,
+          type: currentType,
+          coverFor: document.getElementById('coverSelect').value || '',
+          lat: coords.lat,
+          lng: coords.lng,
+          device: getDeviceInfo()
+        });
+        fetch(API_BASE + '?' + qs.toString())
+          .then(function (r) { return r.json(); })
+          .then(function (res) {
+            setLoading(false);
+            showStatus(res.ok ? 'ok' : 'err', res.message || 'تم');
+            if (res.ok) refreshMyStatus();
+          })
+          .catch(function (err) {
+            setLoading(false);
+            showStatus('err', 'حدث خطأ في الاتصال: ' + err.message);
+          });
+      });
+    }
+
+    function refreshMyStatus() {
+      var settled = false;
+      var safetyTimeout = setTimeout(function () {
+        if (settled) return;
+        settled = true;
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('btnIn').style.display = 'block';
+        document.getElementById('btnOut').style.display = 'none';
+        showStatus('info', 'استغرق التحقق من حالتك وقتاً أطول من المعتاد. الزر ظاهر بشكل مبدئي — حدّث الصفحة لو لزم الأمر.');
+      }, 8000);
+
+      fetch(API_BASE + '?' + new URLSearchParams({ action: 'attendanceStatus', emp: EMP_ID }).toString())
+        .then(function (r) { return r.json(); })
+        .then(function (status) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(safetyTimeout);
+          document.getElementById('loader').style.display = 'none';
+          var hasOpen = !!(status && status.hasOpen === true);
+          document.getElementById('btnIn').style.display = hasOpen ? 'none' : 'block';
+          document.getElementById('btnOut').style.display = hasOpen ? 'block' : 'none';
+        })
+        .catch(function (err) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(safetyTimeout);
+          document.getElementById('loader').style.display = 'none';
+          document.getElementById('btnIn').style.display = 'block';
+          document.getElementById('btnOut').style.display = 'none';
+          showStatus('err', 'تعذر التحقق من حالتك (' + err.message + '). الأزرار ظاهرة بشكل مبدئي، حدّث الصفحة إذا لزم الأمر.');
+        });
+    }
+
+    if (!EMP_ID) {
+      showStatus('err', 'رابط غير صحيح — يجب أن يحتوي على ?emp=رقم الموظف');
+    } else {
+      selectType('عادي');
+      refreshMyStatus();
+    }
+  </script>
+</body>
+</html>
