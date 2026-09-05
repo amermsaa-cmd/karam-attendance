@@ -262,17 +262,15 @@
 
     // ==== تحديد أي زر يظهر (حضور فقط أو انصراف فقط - أبدًا سويًا) ====
     // بعد كل عملية تسجيل، الرابط الراجع من Apps Script يحمل ?hasOpen=1/0
-    // (محسوبة طازجة من الخادم)، ونحفظها محليًا لعرض الزر الصحيح فورًا في
-    // المرات القادمة. بدون أي معلومة، نفترض "غير مسجل حضور" (الأكثر شيوعًا
-    // عند أول فتح) بدون أي تنقّل تلقائي - أي ضغطة تسجيل لاحقة تصحّح الحالة
-    // تلقائيًا من نفسها لأن الخادم هو مصدر الحقيقة دائمًا.
-    const LS_KEY = 'karam_hasOpen_' + EMP_ID;
-    function saveHasOpen(v) {
-      try { localStorage.setItem(LS_KEY, v ? '1' : '0'); } catch (e) {}
-    }
-    function loadHasOpen() {
-      try { return localStorage.getItem(LS_KEY); } catch (e) { return null; }
-    }
+    // (محسوبة طازجة من الخادم) فنعرض الزر الصحيح فورًا بلا أي تخمين.
+    //
+    // عند أول فتح (بدون hasOpen في الرابط) لا نفترض أبدًا "غير مسجل" بشكل
+    // عشوائي - بدل ذلك نعرض تحميل مؤقت ونتحقق من الحالة الحقيقية عبر
+    // تنقّل كامل وموثوق (location.href إلى ?action=attendanceStatus&redirect=1)
+    // بنفس أسلوب تسجيل الحضور/الانصراف الناجح تمامًا (وليس fetch/JSONP غير
+    // الموثوق). هذا التنقّل يحدث داخل هذا الإطار (iframe) فقط ولا يخرج
+    // المستخدم من صفحة التبويبات أبدًا. الخادم يردّنا فورًا لنفس هذه
+    // الصفحة مع ?hasOpen=1/0 الصحيحة.
     function applyButtons(hasOpen) {
       document.getElementById('btnIn').style.display = hasOpen ? 'none' : 'block';
       document.getElementById('btnOut').style.display = hasOpen ? 'block' : 'none';
@@ -281,17 +279,15 @@
     function refreshMyStatus() {
       const hasOpenParam = params.get('hasOpen');
       if (hasOpenParam === '1' || hasOpenParam === '0') {
-        const val = hasOpenParam === '1';
-        saveHasOpen(val);
-        applyButtons(val);
+        applyButtons(hasOpenParam === '1');
         return;
       }
-      const cached = loadHasOpen();
-      if (cached === '1' || cached === '0') {
-        applyButtons(cached === '1');
-        return;
-      }
-      applyButtons(false);
+      // لا توجد معلومة مؤكدة - نعرض تحميل مؤقت (بدون أي زر) ثم نتحقق فعليًا
+      document.getElementById('btnIn').style.display = 'none';
+      document.getElementById('btnOut').style.display = 'none';
+      document.getElementById('loader').style.display = 'block';
+      showStatus('info', 'جاري التحقق من حالتك...');
+      location.href = API_BASE + '?action=attendanceStatus&redirect=1&emp=' + encodeURIComponent(EMP_ID);
     }
 
     if (!EMP_ID) {
