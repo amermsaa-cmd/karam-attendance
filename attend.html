@@ -84,6 +84,12 @@
       white-space: pre-line;
       line-height: 1.6;
     }
+    .verstamp {
+      margin-top: 14px;
+      font-size: 11px;
+      color: #b0b6bd;
+      letter-spacing: .3px;
+    }
     .status.ok { background: #e6f4ea; color: #1e6b34; display: block; }
     .status.err { background: #fce8e6; color: #a50e0e; display: block; }
     .status.info { background: #e8f0fe; color: #174ea6; display: block; }
@@ -120,6 +126,7 @@
     <button class="btn btn-out" id="btnOut" style="display:none" onclick="doAction('out')">🔴 تسجيل الانصراف</button>
 
     <div class="status" id="statusBox"></div>
+    <div class="verstamp">attend 2026-09-05.1</div>
   </div>
 
   <script>
@@ -137,7 +144,7 @@
     // العلوية (Hub.html)، فتبقى التبويبات ظاهرة طول الوقت بدون أي تأثير.
     // ================================================================
 
-    const API_BASE = 'https://script.google.com/macros/s/AKfycbwUsIteMnwV4j0uo0--eYbF5cGdcTjDm1mWaLVs3ZBQ7cmWKiE99gz_--D68aM0UAJN/exec';
+    const API_BASE = 'https://script.google.com/macros/s/AKfycby9pN3RR-ATdwMad6A9YvwK1fGrvprZCaorcRDKP9PsVE0Qrv7eEpJDzCMHvyH7wuv7/exec';
 
     // نفس أسماء الموظفين المستخدمة في index.html — عدّل هنا لو أضفت/غيّرت موظفين
     const EMP_NAMES = { '1': 'محمد', '2': 'مشتاق', '3': 'مجيد' };
