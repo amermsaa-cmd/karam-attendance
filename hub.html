@@ -156,12 +156,6 @@
       color: #b0b6bd;
       letter-spacing: .3px;
     }
-    .direct-link {
-      display: block;
-      margin-top: 10px;
-      font-size: 12px;
-      color: #1976d2;
-    }
     #apiFrame { display: none; width: 0; height: 0; border: 0; }
   </style>
 </head>
@@ -199,7 +193,6 @@
         <div class="status" id="statusBox"></div>
 
         <div class="verstamp" id="verBox"></div>
-        <a class="direct-link" id="directLink" href="#" style="display:none">فتح صفحة الحضور المباشرة</a>
       </div>
     </div>
 
@@ -216,11 +209,10 @@
   'use strict';
 
   // ================= إعدادات =================
-  var APP_VERSION = 'hub 2026-09-06.1';
+  var APP_VERSION = 'hub 2026-09-06.2';
   var API_BASE = 'https://script.google.com/macros/s/AKfycby9pN3RR-ATdwMad6A9YvwK1fGrvprZCaorcRDKP9PsVE0Qrv7eEpJDzCMHvyH7wuv7/exec';
-  var ATTEND_DIRECT = 'attend.html';
 
-  // نفس أسماء الموظفين المستخدمة في index.html و attend.html
+  // نفس أسماء الموظفين المستخدمة في index.html
   var EMP_NAMES = { '1': 'محمد', '2': 'مشتاق', '3': 'مجيد' };
 
   var INIT_TIMEOUT_MS = 15000;   // مهلة انتظار حالة البدء
@@ -364,7 +356,6 @@
     var qs = new URLSearchParams({ action: 'hubInit' });
     apiCall(qs, 'init', INIT_TIMEOUT_MS, function () {
       showRetry('تعذّر الاتصال بالخادم للتحقق من حالتك. تأكد من الاتصال بالإنترنت ثم أعد المحاولة.');
-      $('directLink').style.display = 'block';
     });
   }
   window.loadStatus = loadStatus;
@@ -457,7 +448,6 @@
 
   // ================= الإقلاع =================
   $('verBox').textContent = APP_VERSION;
-  $('directLink').href = ATTEND_DIRECT + '?emp=' + encodeURIComponent(EMP_ID);
 
   if (!EMP_ID) {
     setLoading(false);
