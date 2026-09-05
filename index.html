@@ -112,7 +112,9 @@
   } catch (e) {}
 
   var BASE = "https://script.google.com/macros/s/AKfycby9pN3RR-ATdwMad6A9YvwK1fGrvprZCaorcRDKP9PsVE0Qrv7eEpJDzCMHvyH7wuv7/exec";
-  var TARGET = isManager ? (BASE + "?view=manager") : (BASE + (emp ? ("?emp=" + encodeURIComponent(emp)) : ""));
+  // الموظف يذهب الآن إلى hub.html المستضافة هنا (top-level) وليس إلى صفحة
+  // Apps Script - لأن صلاحية GPS لا تُمرَّر داخل إطار جوجل الإجباري.
+  var TARGET = isManager ? (BASE + "?view=manager") : ("hub.html" + (emp ? ("?emp=" + encodeURIComponent(emp)) : ""));
 
   var navigated = false;
   function goNow() {
