@@ -5,26 +5,73 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#1e9e50">
   <title>تسجيل الحضور</title>
   <style>
     * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; padding: 0; }
     body {
       font-family: 'Segoe UI', Tahoma, sans-serif;
       direction: rtl;
-      text-align: center;
       background: #f4f6f8;
-      margin: 0;
-      padding: 20px 16px;
-      min-height: 100vh;
+      overflow: hidden;
     }
+
+    /* ==== شريط التبويبات: هذه الصفحة أصبحت الصفحة الرئيسية (بدل Hub.html) ====
+       التبويب "الحضور والانصراف" محتوى حقيقي داخل هذه الصفحة نفسها (مش رابط
+       خروج ولا iframe) عشان صلاحية GPS تفضل شغالة. تبويب "مهامي اليومية"
+       (ولو المستخدم مشرف: "تقريري اليومي" و"إضافة مهام") تُعرض داخل iframe
+       عادي لأنها مش محتاجة صلاحية الموقع إطلاقاً، فمفيش أي مشكلة تحميلها
+       بداخل هذه الصفحة. التنقّل بين التبويبات هنا كله محلي (JS) بدون أي
+       خروج فعلي من الصفحة. */
+    .tabs {
+      display: flex;
+      background: #1e9e50;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 10;
+    }
+    .tab-btn {
+      flex: 1;
+      text-align: center;
+      padding: 14px 2px;
+      color: #d7f7e4;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.3;
+      cursor: pointer;
+      border-bottom: 4px solid transparent;
+      user-select: none;
+    }
+    .tab-btn.active {
+      color: #fff;
+      border-bottom-color: #ffd54f;
+      background: rgba(255,255,255,0.08);
+      font-weight: 800;
+    }
+
+    .frame-wrap {
+      position: fixed;
+      top: 58px; left: 0; right: 0; bottom: 0;
+    }
+    .pane {
+      display: none;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .pane.active { display: block; }
+    #pane-attend.active { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+    /* بطاقة الحضور - نفس التصميم السابق بالضبط */
     .card {
       background: #fff;
       border-radius: 16px;
       padding: 24px 20px;
       max-width: 420px;
-      margin: 0 auto;
+      margin: 20px auto;
       box-shadow: 0 2px 12px rgba(0,0,0,0.08);
     }
     h1 { font-size: 22px; margin: 0 0 4px; color: #222; }
@@ -105,88 +152,74 @@
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1 id="empNameHeading">...</h1>
-    <div class="date-time" id="clock"></div>
 
-    <div class="toggle-group" id="typeToggle">
-      <button type="button" class="active" data-type="عادي" onclick="selectType('عادي')">دوام عادي</button>
-      <button type="button" data-type="تغطية" onclick="selectType('تغطية')">تغطية</button>
+  <div class="tabs">
+    <div class="tab-btn active" id="btn-attend" onclick="showTab('attend')">الحضور والانصراف</div>
+    <div class="tab-btn" id="btn-mytasks" onclick="showTab('mytasks')">مهامي اليومية</div>
+    <div class="tab-btn" id="btn-report" onclick="showTab('report')" style="display:none">تقريري اليومي</div>
+    <div class="tab-btn" id="btn-tasks" onclick="showTab('tasks')" style="display:none">إضافة مهام</div>
+  </div>
+
+  <div class="frame-wrap">
+    <div id="pane-attend" class="pane active">
+      <div class="card">
+        <h1 id="empNameHeading">...</h1>
+        <div class="date-time" id="clock"></div>
+
+        <div class="toggle-group" id="typeToggle">
+          <button type="button" class="active" data-type="عادي" onclick="selectType('عادي')">دوام عادي</button>
+          <button type="button" data-type="تغطية" onclick="selectType('تغطية')">تغطية</button>
+        </div>
+
+        <select id="coverSelect">
+          <option value="">اختر من تغطي...</option>
+        </select>
+
+        <div class="loader" id="loader" style="display:block"></div>
+
+        <button class="btn btn-in" id="btnIn" style="display:none" onclick="doAction('in')">🟢 تسجيل الحضور</button>
+        <button class="btn btn-out" id="btnOut" style="display:none" onclick="doAction('out')">🔴 تسجيل الانصراف</button>
+
+        <div class="status" id="statusBox"></div>
+      </div>
     </div>
 
-    <select id="coverSelect">
-      <option value="">اختر من تغطي...</option>
-    </select>
-
-    <div class="loader" id="loader" style="display:block"></div>
-
-    <button class="btn btn-in" id="btnIn" style="display:none" onclick="doAction('in')">🟢 تسجيل الحضور</button>
-    <button class="btn btn-out" id="btnOut" style="display:none" onclick="doAction('out')">🔴 تسجيل الانصراف</button>
-
-    <div class="status" id="statusBox"></div>
+    <iframe id="pane-mytasks" class="pane"></iframe>
+    <iframe id="pane-report" class="pane"></iframe>
+    <iframe id="pane-tasks" class="pane"></iframe>
   </div>
 
   <script>
     // ================================================================
-    // صفحة تسجيل حضور مستقلة تُستضاف خارج Apps Script (GitHub Pages).
-    // سبب وجودها: صفحات Apps Script (script.google.com/.../exec) تُعرض
-    // داخل iframe محكوم من جوجل لا يمرّر صلاحية GPS للمحتوى الداخلي على
-    // بعض الأجهزة/المتصفحات، فيفشل navigator.geolocation دائماً حتى لو
-    // كانت صلاحية الموقع مفعّلة على الجهاز والمتصفح فعلياً.
-    // هذه الصفحة top-level حقيقية على نطاقكم الخاص، فتعمل بصلاحية الموقع
-    // بشكل طبيعي.
+    // هذه الصفحة أصبحت الصفحة الرئيسية للموظف (بدل لوحة Hub.html على
+    // Apps Script). سبب نقل تبويب "الحضور والانصراف" إليها تحديدًا: صفحات
+    // Apps Script (script.google.com/.../exec) تُعرض دائمًا داخل iframe
+    // من تصميم جوجل نفسه (حتى لو فُتحت مباشرة/top-level)، وهذا الـ iframe
+    // لا يمرّر صلاحية GPS على بعض الأجهزة، فيفشل navigator.geolocation
+    // دائماً رغم تفعيل صلاحية الموقع فعليًا على الجهاز.
+    // هذه الصفحة top-level حقيقية على نطاقكم الخاص (GitHub Pages)، فتعمل
+    // صلاحية الموقع فيها بشكل طبيعي. أما "مهامي اليومية"/"التقرير"/"إدارة
+    // المهام" فلا تحتاج صلاحية موقع إطلاقًا، فلا مشكلة من عرضها بداخل
+    // iframe هنا (تمامًا كما كانت تعمل من قبل داخل Hub.html).
     //
-    // التواصل مع الباك إند يتم عبر JSONP (تحميل <script>) وليس fetch():
-    // جوجل لا تضمن إرسال ترويسة CORS بشكل ثابت على كل الأجهزة/المتصفحات
-    // لردود Apps Script (لاحظنا هذا فعليًا: نجح على بعض الأجهزة وفشل على
-    // أخرى بنفس الرابط بالضبط). JSONP لا يعتمد على CORS إطلاقًا بحكم
-    // تصميمه، فيعمل بشكل موحّد على كل الأجهزة بدون استثناء.
+    // تسجيل حضور/انصراف: يتم عبر تنقّل كامل (location.href) وليس
+        // fetch/JSONP، لأن ثبت عمليًا أن كل أنواع الطلبات الفرعية قابلة للحجب
+    // من جوجل على بعض الأجهزة بينما التنقّل الكامل للصفحة لا يخضع لهذا
+    // القيد إطلاقًا. جوجل هترجع صفحة تأكيد بسيطة فيها زر رجوع لهذه الصفحة
+    // (ظهورها لحظيًا أمر طبيعي ومتوقع، مش خطأ).
     // ================================================================
 
-    let __jsonpSeq = 0;
-    function jsonpRequest(baseUrl, params) {
-      return new Promise(function (resolve, reject) {
-        const cbName = '__jsonp_cb_' + (__jsonpSeq++) + '_' + Date.now();
-        const fullParams = Object.assign({}, params, { callback: cbName });
-        const qs = new URLSearchParams(fullParams).toString();
-
-        const timeoutId = setTimeout(function () {
-          cleanup();
-          reject(new Error('انتهت مهلة الاتصال بالخادم'));
-        }, 25000);
-
-        function cleanup() {
-          clearTimeout(timeoutId);
-          delete window[cbName];
-          if (script.parentNode) script.parentNode.removeChild(script);
-        }
-
-        window[cbName] = function (data) {
-          cleanup();
-          resolve(data);
-        };
-
-        const script = document.createElement('script');
-        script.onerror = function () {
-          cleanup();
-          reject(new Error('تعذر الوصول للخادم'));
-        };
-        script.src = baseUrl + '?' + qs;
-        document.body.appendChild(script);
-      });
-    }
-
-    // رابط الويب آب المنشور لمشروع الحضور (نفس ATTENDANCE_BASE_URL في Tasks.gs)
-    // مهم: بعد تطبيق تعديل Tasks.gs، لازم يُعاد نشر (Deploy) نفس هذا الرابط
-    // بنسخة جديدة (New version) حتى تنعكس الإضافة.
     const API_BASE = 'https://script.google.com/macros/s/AKfycbwUsIteMnwV4j0uo0--eYbF5cGdcTjDm1mWaLVs3ZBQ7cmWKiE99gz_--D68aM0UAJN/exec';
 
     // نفس أسماء الموظفين المستخدمة في index.html — عدّل هنا لو أضفت/غيّرت موظفين
     const EMP_NAMES = { '1': 'محمد', '2': 'مشتاق', '3': 'مجيد' };
+    // معرّفات المشرفين (يظهر لهم تبويبا "تقريري اليومي" و"إضافة مهام" إضافيين)
+    const SUPERVISOR_IDS = ['3'];
 
     const params = new URLSearchParams(location.search);
     const EMP_ID = params.get('emp') || '';
     const EMP_NAME = EMP_NAMES[EMP_ID] || 'موظف غير معروف';
+    const IS_SUPERVISOR = SUPERVISOR_IDS.indexOf(EMP_ID) !== -1;
 
     document.title = 'حضور ' + EMP_NAME;
     document.getElementById('empNameHeading').textContent = EMP_NAME;
@@ -202,6 +235,31 @@
         sel.appendChild(opt);
       });
     })();
+
+    // ==== إدارة التبويبات (تنقّل محلي بدون خروج من الصفحة إطلاقًا) ====
+    const TAB_NAMES = ['attend', 'mytasks'].concat(IS_SUPERVISOR ? ['report', 'tasks'] : []);
+    const frameUrls = {
+      mytasks: API_BASE + '?action=mytasks&emp=' + encodeURIComponent(EMP_ID),
+      report: API_BASE + '?action=report&emp=' + encodeURIComponent(EMP_ID),
+      tasks: API_BASE + '?action=admin'
+    };
+    const loadedFrames = { attend: true };
+
+    if (IS_SUPERVISOR) {
+      document.getElementById('btn-report').style.display = 'block';
+      document.getElementById('btn-tasks').style.display = 'block';
+    }
+
+    function showTab(name) {
+      TAB_NAMES.forEach(function (n) {
+        document.getElementById('btn-' + n).classList.toggle('active', n === name);
+        document.getElementById('pane-' + n).classList.toggle('active', n === name);
+      });
+      if (!loadedFrames[name] && frameUrls[name]) {
+        document.getElementById('pane-' + name).src = frameUrls[name];
+        loadedFrames[name] = true;
+      }
+    }
 
     let currentType = 'عادي';
     let coords = null;
@@ -288,9 +346,6 @@
         return;
       }
       getLocationThen(function () {
-        // تنقّل كامل للصفحة (وليس fetch/JSONP): ثبت أن هذا الأسلوب الوحيد
-        // المضمون 100% على كل الأجهزة بدون استثناء - راجع الشرح أعلى الملف.
-        // جوجل هترجع صفحة تأكيد فيها زر رجوع لهذه الصفحة.
         const qs = new URLSearchParams({
           action: kind === 'in' ? 'checkin' : 'checkout',
           emp: EMP_ID,
@@ -305,40 +360,43 @@
       });
     }
 
+    // ==== تحديد أي زر يظهر (حضور فقط أو انصراف فقط - أبدًا سويًا) ====
+    // الأسلوب القديم (JSONP لفحص الحالة) كان يفشل أحيانًا على بعض الأجهزة
+    // ويُظهر الزرين معًا كحل احتياطي - وهذا مرفوض تمامًا. الحل الموثوق
+    // 100%: نفس أسلوب التنقّل الكامل المستخدم للتسجيل نفسه. بعد كل عملية
+    // تسجيل، الرابط الراجع من Apps Script يحمل ?hasOpen=1/0 بشكل مؤكد،
+    // ونحتفظ بآخر حالة معروفة محليًا (localStorage) لعرضها فورًا بدون أي
+    // وميض أو طلب شبكة في كل مرة تُفتح فيها الصفحة لاحقًا. فقط أول مرة
+    // فتح إطلاقًا (بدون أي حالة محفوظة) تحتاج تنقّل قصير وتلقائي للتحقق.
+    const LS_KEY = 'karam_hasOpen_' + EMP_ID;
+    function saveHasOpen(v) {
+      try { localStorage.setItem(LS_KEY, v ? '1' : '0'); } catch (e) {}
+    }
+    function loadHasOpen() {
+      try { return localStorage.getItem(LS_KEY); } catch (e) { return null; }
+    }
+    function applyButtons(hasOpen) {
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('btnIn').style.display = hasOpen ? 'none' : 'block';
+      document.getElementById('btnOut').style.display = hasOpen ? 'block' : 'none';
+    }
+
     function refreshMyStatus() {
-      // هذا الفحص "تحسين تجربة" بس (يحدد أي زر يظهر) - مش أساسي لعمل
-      // التسجيل نفسه (اللي بقى يعتمد على تنقّل كامل ومضمون دايمًا).
-      // لو فشل الفحص (لنفس سبب حجب الطلبات الفرعية على بعض الأجهزة)
-      // نظهر الزرين الاثنين بدل ما نوقف المستخدم برسالة خطأ.
-      var settled = false;
-      var safetyTimeout = setTimeout(function () {
-        if (settled) return;
-        settled = true;
-        showBothButtons();
-      }, 6000);
-
-      function showBothButtons() {
-        document.getElementById('loader').style.display = 'none';
-        document.getElementById('btnIn').style.display = 'block';
-        document.getElementById('btnOut').style.display = 'block';
+      const hasOpenParam = params.get('hasOpen');
+      if (hasOpenParam === '1' || hasOpenParam === '0') {
+        const val = hasOpenParam === '1';
+        saveHasOpen(val);
+        applyButtons(val);
+        return;
       }
-
-      jsonpRequest(API_BASE, { action: 'attendanceStatus', emp: EMP_ID })
-        .then(function (status) {
-          if (settled) return;
-          settled = true;
-          clearTimeout(safetyTimeout);
-          document.getElementById('loader').style.display = 'none';
-          var hasOpen = !!(status && status.hasOpen === true);
-          document.getElementById('btnIn').style.display = hasOpen ? 'none' : 'block';
-          document.getElementById('btnOut').style.display = hasOpen ? 'block' : 'none';
-        })
-        .catch(function () {
-          if (settled) return;
-          settled = true;
-          clearTimeout(safetyTimeout);
-          showBothButtons();
-        });
+      const cached = loadHasOpen();
+      if (cached === '1' || cached === '0') {
+        applyButtons(cached === '1');
+        return;
+      }
+      // أول فتح إطلاقًا بلا أي حالة محفوظة: تنقّل قصير وتلقائي للتحقق من
+      // الحالة الحقيقية، ثم رجوع فوري لهذه الصفحة مع ?hasOpen= في الرابط.
+      location.href = API_BASE + '?action=attendanceStatus&emp=' + encodeURIComponent(EMP_ID) + '&redirect=1';
     }
 
     if (!EMP_ID) {
