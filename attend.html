@@ -288,7 +288,10 @@
         return;
       }
       getLocationThen(function () {
-        jsonpRequest(API_BASE, {
+        // تنقّل كامل للصفحة (وليس fetch/JSONP): ثبت أن هذا الأسلوب الوحيد
+        // المضمون 100% على كل الأجهزة بدون استثناء - راجع الشرح أعلى الملف.
+        // جوجل هترجع صفحة تأكيد فيها زر رجوع لهذه الصفحة.
+        const qs = new URLSearchParams({
           action: kind === 'in' ? 'checkin' : 'checkout',
           emp: EMP_ID,
           type: currentType,
@@ -296,29 +299,29 @@
           lat: coords.lat,
           lng: coords.lng,
           device: getDeviceInfo()
-        })
-          .then(function (res) {
-            setLoading(false);
-            showStatus(res.ok ? 'ok' : 'err', res.message || 'تم');
-            if (res.ok) refreshMyStatus();
-          })
-          .catch(function (err) {
-            setLoading(false);
-            showStatus('err', 'حدث خطأ في الاتصال: ' + err.message);
-          });
+        });
+        showStatus('info', 'جاري الإرسال...');
+        location.href = API_BASE + '?' + qs.toString();
       });
     }
 
     function refreshMyStatus() {
+      // هذا الفحص "تحسين تجربة" بس (يحدد أي زر يظهر) - مش أساسي لعمل
+      // التسجيل نفسه (اللي بقى يعتمد على تنقّل كامل ومضمون دايمًا).
+      // لو فشل الفحص (لنفس سبب حجب الطلبات الفرعية على بعض الأجهزة)
+      // نظهر الزرين الاثنين بدل ما نوقف المستخدم برسالة خطأ.
       var settled = false;
       var safetyTimeout = setTimeout(function () {
         if (settled) return;
         settled = true;
+        showBothButtons();
+      }, 6000);
+
+      function showBothButtons() {
         document.getElementById('loader').style.display = 'none';
         document.getElementById('btnIn').style.display = 'block';
-        document.getElementById('btnOut').style.display = 'none';
-        showStatus('info', 'استغرق التحقق من حالتك وقتاً أطول من المعتاد. الزر ظاهر بشكل مبدئي — حدّث الصفحة لو لزم الأمر.');
-      }, 8000);
+        document.getElementById('btnOut').style.display = 'block';
+      }
 
       jsonpRequest(API_BASE, { action: 'attendanceStatus', emp: EMP_ID })
         .then(function (status) {
@@ -330,14 +333,11 @@
           document.getElementById('btnIn').style.display = hasOpen ? 'none' : 'block';
           document.getElementById('btnOut').style.display = hasOpen ? 'block' : 'none';
         })
-        .catch(function (err) {
+        .catch(function () {
           if (settled) return;
           settled = true;
           clearTimeout(safetyTimeout);
-          document.getElementById('loader').style.display = 'none';
-          document.getElementById('btnIn').style.display = 'block';
-          document.getElementById('btnOut').style.display = 'none';
-          showStatus('err', 'تعذر التحقق من حالتك (' + err.message + '). الأزرار ظاهرة بشكل مبدئي، حدّث الصفحة إذا لزم الأمر.');
+          showBothButtons();
         });
     }
 
