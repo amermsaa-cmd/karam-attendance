@@ -85,23 +85,34 @@
 
   var params = new URLSearchParams(location.search);
   var emp = params.get('emp');
+  var view = params.get('view');
+  var isManager = view === 'manager';
   var names = { '1': 'محمد', '2': 'مشتاق', '3': 'مجيد' };
   var name = names[emp] || '';
 
-  document.title = name ? ('لوحة المتابعة - ' + name) : 'لوحة المتابعة';
-  if (name) {
-    document.getElementById('greetText').textContent = 'أهلاً ' + name + ' …جارِ الفتح';
+  // مفتاح موحّد يُستخدم لاختيار ملف manifest ولحفظ حالة التثبيت (منفصل لكل رابط)
+  var key = isManager ? 'manager' : emp;
+
+  if (isManager) {
+    document.title = 'لوحة المدير - كرم للسفر والنقل';
+    document.getElementById('greetText').textContent = 'جارِ فتح لوحة المدير…';
+  } else {
+    document.title = name ? ('لوحة المتابعة - ' + name) : 'لوحة المتابعة';
+    if (name) {
+      document.getElementById('greetText').textContent = 'أهلاً ' + name + ' …جارِ الفتح';
+    }
   }
 
-  // اختيار ملف manifest الصحيح حسب الموظف (كل موظف له اسم وأيقونة بدء منفصلة)
+  // اختيار ملف manifest الصحيح حسب الرابط (كل موظف والمدير له اسم وأيقونة بدء منفصلة)
   try {
     var manifestLink = document.getElementById('manifestLink');
-    if (manifestLink && emp) {
-      manifestLink.setAttribute('href', 'manifest-' + emp + '.json');
+    if (manifestLink && key) {
+      manifestLink.setAttribute('href', 'manifest-' + key + '.json');
     }
   } catch (e) {}
 
-  var TARGET = "https://script.google.com/macros/s/AKfycby9pN3RR-ATdwMad6A9YvwK1fGrvprZCaorcRDKP9PsVE0Qrv7eEpJDzCMHvyH7wuv7/exec" + (emp ? ("?emp=" + encodeURIComponent(emp)) : "");
+  var BASE = "https://script.google.com/macros/s/AKfycby9pN3RR-ATdwMad6A9YvwK1fGrvprZCaorcRDKP9PsVE0Qrv7eEpJDzCMHvyH7wuv7/exec";
+  var TARGET = isManager ? (BASE + "?view=manager") : (BASE + (emp ? ("?emp=" + encodeURIComponent(emp)) : ""));
 
   var navigated = false;
   function goNow() {
@@ -116,7 +127,7 @@
   }
 
   // مفتاح تخزين محلي منفصل لكل موظف: بمجرد ما يتثبت التطبيق مرة واحدة، لا نعرض زر التثبيت مرة أخرى إطلاقاً
-  var STORAGE_KEY = 'karam_installed_emp_' + (emp || 'default');
+  var STORAGE_KEY = 'karam_installed_' + (key || 'default');
   function markInstalled() {
     try { localStorage.setItem(STORAGE_KEY, '1'); } catch (e) {}
   }
