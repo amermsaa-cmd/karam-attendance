@@ -1,27 +1,42 @@
 ﻿# ============================================================
-#  نشر نظام الحضور - أمر واحد يتحقق من نفسه
+#  نشر نظام الحضور - أمر واحد يودّع ويدفع وينشر ويتحقق
 #  الاستخدام:  .\deploy.ps1 "وصف مختصر للتغيير"
 # ============================================================
 $ErrorActionPreference = 'Stop'
 $root = 'C:\karam-attendance'
+$gas  = Join-Path $root 'gas'
 $dep  = 'AKfycby9pN3RR-ATdwMad6A9YvwK1fGrvprZCaorcRDKP9PsVE0Qrv7eEpJDzCMHvyH7wuv7'
 $desc = if ($args.Count -gt 0 -and $args[0]) { $args[0] } else { (Get-Date -Format 'yyyy-MM-dd HH:mm') }
 
+function Save-Repo($path, $label) {
+    Push-Location $path
+    $dirty = git status --porcelain
+    if ($dirty) {
+        Write-Host "[$label] إيداع التغييرات..." -ForegroundColor Cyan
+        git add -A
+        git commit -q -m $desc
+    } else {
+        Write-Host "[$label] لا تغييرات جديدة" -ForegroundColor DarkGray
+    }
+    git push -q
+    Pop-Location
+}
+
 # 1) الإصدار المتوقع - يُقرأ من الكود نفسه، لا يُكتب يدويًا
-$codeFile = Join-Path $root 'gas\الرمز.js'
-$codeText = Get-Content -Raw -Encoding UTF8 $codeFile
+$codeText = Get-Content -Raw -Encoding UTF8 (Join-Path $gas 'الرمز.js')
 if ($codeText -notmatch "APP_VERSION\s*=\s*'([^']+)'") { throw 'تعذّر قراءة APP_VERSION من الكود' }
 $expected = $Matches[1]
-Write-Host "الإصدار المتوقع: $expected" -ForegroundColor Cyan
+Write-Host "الإصدار المتوقع: $expected`n" -ForegroundColor Cyan
 
-# 2) دفع الواجهة إلى GitHub Pages
-Set-Location $root
-git push
+# 2) حفظ ودفع المستودعين - لا يُنشر كود غير محفوظ أبدًا
+Save-Repo $root 'الواجهة'
+Save-Repo $gas  'الخادم'
 
 # 3) دفع كود Apps Script وتحديث نفس النشر (لا نشر جديد أبدًا)
-Set-Location (Join-Path $root 'gas')
+Push-Location $gas
 clasp push -f
 clasp redeploy $dep -d $desc
+Pop-Location
 
 # 4) بوابة التحقق: لا نقول "تم" قبل أن يؤكد الرابط الحي نفسه
 Write-Host "`nجاري التحقق من الرابط الحي..." -ForegroundColor Cyan
