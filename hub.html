@@ -69,6 +69,25 @@
     }
     .tab-btn.hidden { display: none; }
 
+    /* شارة العدّاد الحمراء على التبويب (بأسلوب عدّاد واتساب) */
+    .tab-badge {
+      display: inline-block;
+      min-width: 18px;
+      height: 18px;
+      line-height: 18px;
+      padding: 0 5px;
+      margin-inline-start: 5px;
+      border-radius: 9px;
+      background: #d32f2f;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: center;
+      vertical-align: middle;
+      box-shadow: 0 0 0 1.5px rgba(255,255,255,.35);
+    }
+    .tab-badge.hidden { display: none; }
+
     /* ---------- منطقة المحتوى ---------- */
     .panes {
       position: fixed;
@@ -156,15 +175,15 @@
       color: #b0b6bd;
       letter-spacing: .3px;
     }
-    #apiFrame { display: none; width: 0; height: 0; border: 0; }
+    #apiFrame, #badgeFrame { display: none; width: 0; height: 0; border: 0; }
   </style>
 </head>
 <body>
 
   <div class="tabs" id="tabs">
     <div class="tab-btn active" id="btn-attend"  onclick="showTab('attend')">الحضور والانصراف</div>
-    <div class="tab-btn"        id="btn-mytasks" onclick="showTab('mytasks')">مهامي اليومية</div>
-    <div class="tab-btn hidden" id="btn-report"  onclick="showTab('report')">تقريري اليومي</div>
+    <div class="tab-btn"        id="btn-mytasks" onclick="showTab('mytasks')">مهامي اليومية<span class="tab-badge hidden" id="badge-mytasks"></span></div>
+    <div class="tab-btn hidden" id="btn-report"  onclick="showTab('report')">تقريري اليومي<span class="tab-badge hidden" id="badge-report"></span></div>
     <div class="tab-btn hidden" id="btn-tasks"   onclick="showTab('tasks')">إضافة مهام</div>
   </div>
 
@@ -204,12 +223,15 @@
   <!-- إطار مخفي: كل نداءات الخادم تمر عبره، والرد يعود عبر postMessage -->
   <iframe id="apiFrame" title="api"></iframe>
 
+  <!-- إطار مستقل للشارات: لا يستخدم apiFrame حتى لا يقطع نداء حضور/انصراف جاريًا -->
+  <iframe id="badgeFrame" title="badges"></iframe>
+
 <script>
 (function () {
   'use strict';
 
   // ================= إعدادات =================
-  var APP_VERSION = 'hub 2026-09-06.2';
+  var APP_VERSION = 'hub 2026-09-13.1';
   var API_BASE = 'https://script.google.com/macros/s/AKfycby9pN3RR-ATdwMad6A9YvwK1fGrvprZCaorcRDKP9PsVE0Qrv7eEpJDzCMHvyH7wuv7/exec';
 
   // نفس أسماء الموظفين المستخدمة في index.html
@@ -284,12 +306,48 @@
       $('pane-' + name).src = TAB_URLS[name];
       loadedFrames[name] = true;
     }
+    // مغادرة تبويب المهام/التقرير أرجح لحظة تغيّر فيها الأعداد
+    loadBadges();
   };
 
   function enableSupervisorTabs() {
     $('btn-report').classList.remove('hidden');
     $('btn-tasks').classList.remove('hidden');
   }
+
+  // ================= شارات العدّاد على التبويبات =================
+  // إطار مستقل تمامًا عن apiFrame: نداءات الحضور/الانصراف لها حالة pending
+  // واحدة، ولو مرّت الشارات عبر نفس الإطار لقطعت أي نداء جارٍ تحته.
+  var BADGE_POLL_MS = 45000;
+  var badgeTimer = null;
+
+  function setBadge(name, count) {
+    var el = $('badge-' + name);
+    if (!el) return;
+    var n = parseInt(count, 10);
+    if (!n || n < 1) { el.classList.add('hidden'); el.textContent = ''; return; }
+    el.textContent = n > 99 ? '99+' : String(n);
+    el.classList.remove('hidden');
+  }
+
+  function loadBadges() {
+    if (!EMP_ID) return;
+    var qs = new URLSearchParams({ action: 'hubBadges' });
+    qs.set('emp', EMP_ID);
+    qs.set('_t', String(Date.now()));   // كسر التخزين المؤقت من جانب جوجل
+    $('badgeFrame').src = API_BASE + '?' + qs.toString();
+  }
+
+  function startBadgePolling() {
+    loadBadges();
+    if (badgeTimer) clearInterval(badgeTimer);
+    badgeTimer = setInterval(loadBadges, BADGE_POLL_MS);
+  }
+
+  // تحديث فوري عند عودة الموظف للصفحة بعد إنجاز مهمة، بدل انتظار الدورة
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) loadBadges();
+  });
 
   // ================= نداء الخادم عبر إطار مخفي =================
   function apiCall(qs, kind, timeoutMs, onTimeout) {
@@ -333,6 +391,12 @@
       if (d.isSupervisor) enableSupervisorTabs();
       applyButtons(!!d.hasOpen);
       showStatus('', '');
+      return;
+    }
+
+    if (d.type === 'hubBadges') {
+      setBadge('mytasks', d.mytasks);
+      setBadge('report', d.report);
       return;
     }
 
@@ -462,6 +526,7 @@
     };
     selectType('عادي');
     loadStatus(false);
+    startBadgePolling();
   }
 })();
 </script>
