@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+  
+  <meta charset="utf-8">
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      direction: rtl;
+      background: #eef1f4;
+      margin: 0;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      color: #24292f;
+    }
+
+    /* ---------- الحالة الهادئة: لا بيانات حضور، فقط إشارة أن الشاشة تعمل ---------- */
+    .idle { text-align: center; opacity: .75; }
+    .idle .mark { font-size: 40px; margin-bottom: 10px; }
+    .idle .t1 { font-size: 17px; font-weight: 700; color: #2e7d32; }
+    .idle .t2 { font-size: 13px; color: #78838d; margin-top: 6px; }
+    .idle .clock { font-size: 30px; font-weight: 800; margin-top: 14px; letter-spacing: 1px; }
+    .idle .err { color: #c62828; font-weight: 700; }
+
+    /* ---------- النافذة المنبثقة ---------- */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(15, 20, 25, .72);
+      display: none; align-items: center; justify-content: center;
+      padding: 20px; z-index: 50;
+    }
+    .overlay.show { display: flex; }
+
+    .popup {
+      background: #fff;
+      border-radius: 16px;
+      width: 100%; max-width: 440px;
+      padding: 26px 24px 20px;
+      text-align: center;
+      box-shadow: 0 18px 50px rgba(0,0,0,.35);
+      border-top: 7px solid #c62828;
+      animation: pop .18s ease-out;
+    }
+    .popup.soft { border-top-color: #ef6c00; }
+    @keyframes pop {
+      from { transform: scale(.94); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    .p-icon { font-size: 40px; line-height: 1; margin-bottom: 10px; }
+    .p-title { font-size: 21px; font-weight: 800; margin-bottom: 8px; color: #1f2328; }
+    .p-text { font-size: 15px; line-height: 1.6; color: #47525d; }
+    .p-meta { font-size: 12.5px; color: #8a949d; margin-top: 8px; }
+
+    .p-actions { margin-top: 20px; display: flex; flex-direction: column; gap: 9px; }
+    .btn {
+      display: block; width: 100%;
+      padding: 13px 14px;
+      border: none; border-radius: 10px;
+      font-family: inherit; font-size: 15px; font-weight: 700;
+      cursor: pointer; text-decoration: none;
+    }
+    .btn-go { background: #2e7d32; color: #fff; }
+    .btn-go:active { background: #256428; }
+    .btn-close { background: #eceff1; color: #455a64; }
+    .btn-cancel { background: none; color: #90a4ae; font-size: 13px; font-weight: 600; padding: 6px; }
+  </style>
+</head>
+<body>
+
+  <div class="idle">
+    <div class="mark">🖥️</div>
+    <div class="t1">شاشة التنبيهات تعمل</div>
+    <div class="t2" id="sub">اترك هذه الصفحة مفتوحة</div>
+    <div class="clock" id="clock">--:--</div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="popup" id="popup">
+      <div class="p-icon" id="pIcon">⏰</div>
+      <div class="p-title" id="pTitle"></div>
+      <div class="p-text" id="pText"></div>
+      <div class="p-meta" id="pMeta"></div>
+      <div class="p-actions">
+        <a class="btn btn-go" id="pGo" target="_blank" rel="noopener">تسجيل الحضور الآن</a>
+        <button class="btn btn-close" id="pClose">إغلاق</button>
+        <button class="btn btn-cancel" id="pCancel">إلغاء تنبيهات اليوم</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  document.getElementById('clock').textContent = '٠٩:٠٥ ص';
+  document.getElementById('pIcon').textContent = '⏰';
+  document.getElementById('pTitle').textContent = 'محمد — لم تسجّل حضورك';
+  document.getElementById('pText').textContent = 'بدأ دوامك الساعة 09:00 ولم يصلنا تسجيل حضورك.';
+  document.getElementById('pMeta').textContent = 'مضى 5 دقيقة على بداية دوامك';
+  document.getElementById('pGo').textContent = 'تسجيل الحضور الآن';
+  document.getElementById('pGo').removeAttribute('href');
+  document.getElementById('overlay').classList.add('show');
+})();
+</script>
+
+</body>
+</html>

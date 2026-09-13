@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+  
+  <meta charset="utf-8">
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      direction: rtl;
+      background: #eef1f4;
+      margin: 0;
+      padding: 20px;
+      color: #24292f;
+    }
+    .head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      flex-wrap: wrap; gap: 10px; margin-bottom: 18px;
+    }
+    .title { font-size: 22px; font-weight: 800; color: #1b5e20; }
+    .clock { font-size: 34px; font-weight: 800; letter-spacing: 1px; }
+    .sub { font-size: 13px; color: #6b7280; }
+
+    /* ---------- التنبيهات ---------- */
+    .alert {
+      background: #c62828;
+      color: #fff;
+      border-radius: 14px;
+      padding: 20px 22px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 14px rgba(198,40,40,.28);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .alert.soft { background: #ef6c00; box-shadow: 0 4px 14px rgba(239,108,0,.26); animation: none; }
+    .alert-name { font-size: 26px; font-weight: 800; margin-bottom: 4px; }
+    .alert-text { font-size: 17px; line-height: 1.5; }
+    .alert-meta { font-size: 13px; opacity: .85; margin-top: 8px; }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.012); }
+    }
+
+    .calm {
+      background: #fff; border-radius: 14px; padding: 26px;
+      text-align: center; color: #2e7d32; font-size: 18px; font-weight: 700;
+      box-shadow: 0 1px 5px rgba(0,0,0,.06); margin-bottom: 20px;
+    }
+
+    /* ---------- حالة الفريق ---------- */
+    .section { font-size: 13px; color: #6b7280; margin: 22px 0 10px; font-weight: 700; }
+    .team { display: flex; flex-wrap: wrap; gap: 12px; }
+    .emp {
+      background: #fff; border-radius: 12px; padding: 14px 16px;
+      min-width: 190px; flex: 1;
+      box-shadow: 0 1px 5px rgba(0,0,0,.06);
+      border-inline-start: 5px solid #cfd4da;
+    }
+    .emp.in    { border-inline-start-color: #2e7d32; }
+    .emp.miss  { border-inline-start-color: #c62828; }
+    .emp.done  { border-inline-start-color: #90a4ae; }
+    .emp-name  { font-size: 17px; font-weight: 700; margin-bottom: 3px; }
+    .emp-state { font-size: 13px; color: #455a64; }
+    .emp-shift { font-size: 11px; color: #9aa4ad; margin-top: 3px; }
+
+    .foot { margin-top: 24px; font-size: 11px; color: #9aa4ad; text-align: center; }
+    .err { color: #c62828; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+  <div class="head">
+    <div>
+      <div class="title">شاشة تنبيهات المكتب</div>
+      <div class="sub" id="dateSub">…</div>
+    </div>
+    <div class="clock" id="clock">--:--</div>
+  </div>
+
+  <div id="alerts"></div>
+
+  <div class="section">حالة الفريق الآن</div>
+  <div class="team" id="team"></div>
+
+  <div class="foot" id="foot">جارٍ التحميل…</div>
+
+<script>
+(function () {
+  function esc(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+  var data = {
+    date: '2026-09-13',
+    alerts: [
+      { name:'مشتاق', kind:'حضور',   minutes:12,  text:'بدأ دوامه الساعة 15:00 ولم يسجّل حضوره بعد' },
+      { name:'محمد',  kind:'انصراف', minutes:-5,  text:'دوامه ينتهي الساعة 15:00 - لا تنسَ تسجيل الانصراف' }
+    ],
+    team: [
+      { name:'محمد',  shift:'09:00 - 15:00', state:'داخل الدوام', open:true },
+      { name:'مشتاق', shift:'15:00 - 22:00', state:'لم يحضر بعد', open:false },
+      { name:'مجيد',  shift:'دوام مرن',      state:'أنهى دوامه',  open:false }
+    ]
+  };
+  document.getElementById('dateSub').textContent = data.date;
+  document.getElementById('clock').textContent = '٠٣:١٢ م';
+  document.getElementById('alerts').innerHTML = data.alerts.map(function(a){
+    var soft = (a.kind==='انصراف' && a.minutes<0);
+    var meta = a.kind==='حضور'
+      ? 'مضى ' + Math.max(0,a.minutes) + ' دقيقة على بداية دوامه'
+      : (a.minutes<0 ? 'متبقٍ ' + Math.abs(a.minutes) + ' دقيقة على نهاية الدوام'
+                     : 'مضى ' + a.minutes + ' دقيقة على نهاية دوامه');
+    return '<div class="alert'+(soft?' soft':'')+'">'+
+      '<div class="alert-name">'+esc(a.name)+'</div>'+
+      '<div class="alert-text">'+esc(a.text)+'</div>'+
+      '<div class="alert-meta">'+esc(meta)+'</div></div>';
+  }).join('');
+  document.getElementById('team').innerHTML = data.team.map(function(t){
+    var cls = t.open ? 'in' : (t.state==='لم يحضر بعد' ? 'miss' : (t.state==='أنهى دوامه' ? 'done' : ''));
+    return '<div class="emp '+cls+'"><div class="emp-name">'+esc(t.name)+'</div>'+
+      '<div class="emp-state">'+esc(t.state)+'</div>'+
+      '<div class="emp-shift">'+esc(t.shift)+'</div></div>';
+  }).join('');
+  document.getElementById('foot').textContent = 'آخر تحديث ٠٣:١٢:٠٠ م — تحديث تلقائي كل دقيقة';
+})();
+</script>
+
+</body>
+</html>

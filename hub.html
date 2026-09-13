@@ -288,7 +288,12 @@
   // ================= الساعة =================
   function tickClock() {
     var now = new Date();
-    $('clock').textContent = now.toLocaleDateString('ar-EG') + ' - ' + now.toLocaleTimeString('ar-EG');
+    // نظام 12 ساعة صراحةً (ص/م): الاعتماد على إعداد الجهاز كان يعرضها
+    // بنظام 24 ساعة على بعض الأجهزة.
+    var timeStr = now.toLocaleTimeString('ar-EG', {
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+    });
+    $('clock').textContent = now.toLocaleDateString('ar-EG') + ' - ' + timeStr;
   }
   setInterval(tickClock, 1000);
   tickClock();
