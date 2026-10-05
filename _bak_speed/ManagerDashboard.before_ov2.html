@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <title>لوحة المدير</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap">
+  <style>
+    :root{
+      --bg:#f7f5f2;
+      --page:#f9f9f7;
+      --ink:#1f2422;
+      --muted:#6b7570;
+      --accent:#1f6f4f;
+      --accent-soft:#e4efe9;
+      --border:#e2ddd4;
+      --panel:#ffffff;
+      --shadow: 0 20px 50px -25px rgba(31,36,34,0.35);
+
+      --good:#0ca30c;
+      --warning:#c98500;
+      --critical:#d03b3b;
+      --good-soft:#e6f6e6;
+      --warning-soft:#fdf1dc;
+      --critical-soft:#fbe6e6;
+
+      --emp-c1:#2a78d6;
+      --emp-c2:#eb6834;
+      --emp-c3:#1baf7a;
+      --emp-c4:#8f5fd1;
+    }
+    @media (prefers-color-scheme: dark){
+      :root:not([data-theme="light"]){
+        --bg:#14181a; --page:#0d0d0d; --ink:#eef0ee; --muted:#9aa39c; --accent:#3ecf94;
+        --accent-soft:#1b2b24; --border:#262c2d; --panel:#1b2021; --shadow: 0 20px 50px -25px rgba(0,0,0,0.6);
+        --good:#0ca30c; --warning:#fab219; --critical:#e66767;
+        --good-soft:#12281a; --warning-soft:#2c2210; --critical-soft:#2c1414;
+        --emp-c1:#3987e5; --emp-c2:#d95926; --emp-c3:#199e70; --emp-c4:#a483e0;
+      }
+    }
+    :root[data-theme="dark"]{
+      --bg:#14181a; --page:#0d0d0d; --ink:#eef0ee; --muted:#9aa39c; --accent:#3ecf94;
+      --accent-soft:#1b2b24; --border:#262c2d; --panel:#1b2021; --shadow: 0 20px 50px -25px rgba(0,0,0,0.6);
+      --good:#0ca30c; --warning:#fab219; --critical:#e66767;
+      --good-soft:#12281a; --warning-soft:#2c2210; --critical-soft:#2c1414;
+      --emp-c1:#3987e5; --emp-c2:#d95926; --emp-c3:#199e70; --emp-c4:#a483e0;
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0; background:var(--page); color:var(--ink);
+      font-family:'Tajawal','Segoe UI',Tahoma,sans-serif; direction:rtl; min-height:100vh;
+    }
+    .wrap{ max-width:1100px; margin:0 auto; padding:28px 20px 60px; }
+
+    .top{ text-align:center; max-width:640px; margin:0 auto 24px; }
+    h1{ font-size:clamp(20px,3vw,26px); margin:6px 0 6px; text-wrap:balance; font-weight:800; }
+    .top p{ color:var(--muted); font-size:13px; line-height:1.6; margin:0; }
+
+    .dash{
+      background:var(--bg); border-radius:20px; padding:26px; box-shadow:var(--shadow); border:1px solid var(--border);
+    }
+
+    .dash-header{
+      display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:10px;
+    }
+    .dash-header .office{ font-size:18px; font-weight:800; color:var(--ink); }
+    .dash-header .office span{ display:block; font-size:12px; font-weight:600; color:var(--muted); margin-top:2px; }
+    .dash-date{ font-size:13px; color:var(--muted); background:var(--panel); border:1px solid var(--border); padding:7px 14px; border-radius:20px; }
+
+    /* ---- view tabs ---- */
+    .view-tabs{ display:flex; gap:8px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:0; }
+    .view-tab{
+      background:none; border:none; padding:10px 4px; margin-inline-end:18px; font-family:inherit; font-size:13.5px;
+      font-weight:700; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px;
+    }
+    .view-tab.active{ color:var(--accent); border-bottom-color:var(--accent); }
+    .view-tab:hover{ color:var(--ink); }
+
+    /* ---- stat tiles ---- */
+    .stat-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-bottom:22px; }
+    .stat-tile{
+      background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:18px 20px;
+      display:flex; align-items:center; gap:14px; cursor:pointer; transition:transform .15s ease, border-color .15s ease;
+    }
+    .stat-tile:hover{ transform:translateY(-2px); border-color:var(--accent); }
+    .stat-ic{
+      width:42px; height:42px; border-radius:11px; display:flex; align-items:center; justify-content:center;
+      font-size:19px; flex-shrink:0;
+    }
+    .stat-tile.attend .stat-ic{ background:var(--good-soft); color:var(--good); }
+    .stat-tile.urgent .stat-ic{ background:var(--critical-soft); color:var(--critical); }
+    .stat-tile.reports .stat-ic{ background:var(--warning-soft); color:var(--warning); }
+    .stat-num{ font-size:24px; font-weight:800; line-height:1.1; font-variant-numeric:tabular-nums; }
+    .stat-label{ font-size:12.5px; color:var(--muted); margin-top:2px; }
+
+    /* ---- employee cards ---- */
+    .section-title{ font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--accent); font-weight:800; margin:0 0 12px; }
+    .emp-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(270px,1fr)); gap:14px; margin-bottom:26px; }
+    .emp-card{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:18px; }
+    .emp-top{ display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+    .emp-avatar{
+      width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-weight:800; font-size:16px; color:#fff; flex-shrink:0;
+    }
+    .emp-name{ font-size:15px; font-weight:800; }
+    .emp-role{ font-size:11.5px; color:var(--muted); }
+
+    .emp-status{
+      display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700;
+      padding:5px 10px; border-radius:8px; margin-bottom:10px;
+    }
+    .emp-status.good{ background:var(--good-soft); color:var(--good); }
+    .emp-status.warning{ background:var(--warning-soft); color:var(--warning); }
+    .emp-status.critical{ background:var(--critical-soft); color:var(--critical); }
+
+    .emp-tasks-line{ font-size:12.5px; color:var(--muted); margin-bottom:6px; }
+    .emp-progress{ height:6px; border-radius:3px; background:var(--border); overflow:hidden; margin-bottom:12px; }
+    .emp-progress-fill{ height:100%; border-radius:3px; }
+
+    .emp-alert{
+      display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:12px; font-weight:600; line-height:1.5;
+      padding:9px 10px; border-radius:9px; margin-bottom:10px;
+    }
+    .emp-alert.warning{ background:var(--warning-soft); color:var(--warning); }
+    .emp-alert.critical{ background:var(--critical-soft); color:var(--critical); }
+    .emp-alert .fix-btn{ margin-inline-start:8px; }
+    .emp-alert .fix-form{ flex-basis:100%; }
+
+    .emp-chart-label{ font-size:11px; color:var(--muted); margin-bottom:5px; }
+    .emp-chart{ display:flex; align-items:flex-end; gap:4px; height:38px; margin-bottom:12px; }
+    .emp-bar{ flex:1; border-radius:3px 3px 1px 1px; min-height:3px; }
+    .emp-chart-days{ display:flex; gap:4px; margin-top:3px; }
+    .emp-chart-days span{ flex:1; text-align:center; font-size:9px; color:var(--muted); }
+
+    .emp-detail-btn{
+      display:block; width:100%; text-align:center; padding:8px; border-radius:8px; border:1px solid var(--border);
+      background:transparent; color:var(--ink); font-weight:700; font-size:12px; cursor:pointer;
+    }
+    .emp-detail-btn:hover{ background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+
+    /* ---- reports review ---- */
+    .reports-card{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:18px; margin-bottom:26px; }
+    .report-item{ padding:14px 0; border-top:1px solid var(--border); }
+    .report-item:first-of-type{ border-top:none; padding-top:2px; }
+    .report-item-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; flex-wrap:wrap; gap:6px; }
+    .report-item-title{ font-size:13.5px; font-weight:800; }
+    .report-item-badge{ font-size:11px; font-weight:700; color:var(--warning); background:var(--warning-soft); padding:3px 9px; border-radius:6px; }
+    .report-caption{ font-size:11px; color:var(--muted); margin-top:6px; }
+    .reports-empty{ text-align:center; padding:20px; color:var(--muted); font-size:13px; }
+
+    .report-review-btn{
+      padding:9px 14px; border-radius:8px; border:1px solid var(--border); background:var(--panel);
+      color:var(--accent); font-weight:700; font-size:12.5px; cursor:pointer;
+    }
+    .report-review-btn:hover{ background:var(--accent-soft); border-color:var(--accent); }
+
+    @keyframes flashPulse{
+      0%{ box-shadow:0 0 0 0 rgba(31,111,79,.45); }
+      70%{ box-shadow:0 0 0 16px rgba(31,111,79,0); }
+      100%{ box-shadow:0 0 0 0 rgba(31,111,79,0); }
+    }
+    .reports-card.flash{ animation:flashPulse 0.9s ease-out 2; }
+
+    /* ---- detail modal ---- */
+    .modal-overlay{
+      position:fixed; inset:0; background:rgba(10,14,12,.55); display:flex; align-items:center; justify-content:center;
+      padding:24px; z-index:90; opacity:0; pointer-events:none; transition:opacity .18s ease;
+    }
+    .modal-overlay.show{ opacity:1; pointer-events:auto; }
+    .modal-panel{
+      background:var(--panel); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow);
+      max-width:560px; width:100%; max-height:85vh; overflow-y:auto; padding:22px;
+      transform:translateY(14px); transition:transform .18s ease;
+    }
+    .modal-overlay.show .modal-panel{ transform:translateY(0); }
+    .modal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; gap:10px; }
+    .modal-title{ font-size:15px; font-weight:800; }
+    .modal-close-btn{
+      background:none; border:none; font-size:20px; line-height:1; color:var(--muted); cursor:pointer; padding:4px 8px;
+      border-radius:8px;
+    }
+    .modal-close-btn:hover{ background:var(--accent-soft); color:var(--accent); }
+
+    .detail-top{ display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+    .detail-avatar{
+      width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-weight:800; font-size:17px; color:#fff; flex-shrink:0;
+    }
+    .detail-name{ font-size:15.5px; font-weight:800; }
+    .detail-role{ font-size:11.5px; color:var(--muted); }
+    .detail-attend{ font-size:12.5px; font-weight:700; color:var(--ink); margin-bottom:16px; }
+
+    .detail-cats-label{ font-size:11px; font-weight:800; color:var(--accent); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; }
+    .detail-cat{ margin-bottom:12px; }
+    .detail-cat.warn{ background:var(--warning-soft); border-radius:10px; padding:8px 10px; }
+    .detail-cat-head{ display:flex; align-items:center; justify-content:space-between; font-size:12.5px; font-weight:800; margin-bottom:4px; }
+    .detail-cat-count{ font-size:12px; font-weight:700; color:var(--muted); }
+    .detail-cat.warn .detail-cat-count{ color:var(--warning); }
+    .detail-task{ display:flex; align-items:center; gap:8px; font-size:12.5px; padding:6px 2px; border-top:1px solid var(--border); flex-wrap:wrap; }
+    .detail-cat .detail-task:first-child{ border-top:none; }
+    .detail-task-check{ flex-shrink:0; }
+    .detail-task-title{ flex:1; }
+    .detail-task.done .detail-task-title{ color:var(--muted); text-decoration:line-through; }
+    .detail-task-urgent{ font-size:10px; font-weight:800; color:var(--critical); background:var(--critical-soft); padding:2px 8px; border-radius:6px; flex-shrink:0; }
+    .detail-task-note{ font-size:10.5px; color:var(--warning); font-weight:700; flex-shrink:0; }
+    .detail-photo-btn{
+      font-size:10.5px; font-weight:700; color:var(--accent); background:var(--accent-soft); border:none;
+      padding:3px 9px; border-radius:6px; cursor:pointer; flex-shrink:0;
+    }
+    .detail-photo-btn:hover{ opacity:.85; }
+    .detail-photo-preview{ width:100%; max-width:260px; border-radius:10px; margin-top:8px; border:1px solid var(--border); }
+
+    .detail-note-box{ margin-top:18px; padding-top:16px; border-top:1px solid var(--border); }
+    .detail-note-box label{ display:block; font-size:11.5px; font-weight:800; color:var(--muted); margin-bottom:8px; }
+    .report-note-row{ display:flex; gap:8px; }
+    .report-note-row input{
+      flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg);
+      font-size:12.5px; font-family:inherit; color:var(--ink);
+    }
+    .report-note-row button{
+      padding:9px 16px; border-radius:8px; border:none; background:var(--accent); color:#fff;
+      font-weight:700; font-size:12.5px; cursor:pointer; white-space:nowrap;
+    }
+
+    .modal-list-row{
+      display:flex; align-items:center; gap:10px; padding:10px 6px; border-top:1px solid var(--border);
+      cursor:pointer; border-radius:8px;
+    }
+    .modal-list-row:first-child{ border-top:none; }
+    .modal-list-row:hover{ background:var(--accent-soft); }
+    .modal-list-avatar{
+      width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-weight:800; font-size:12.5px; color:#fff; flex-shrink:0;
+    }
+    .modal-list-name{ font-weight:700; font-size:13px; width:60px; flex-shrink:0; }
+    .modal-list-info{ color:var(--muted); font-size:12.5px; flex:1; }
+    .modal-empty{ text-align:center; padding:20px; color:var(--muted); font-size:13px; }
+
+    /* ---- payroll card ---- */
+    .payroll-card{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:6px 18px; margin-bottom:18px; }
+    .payroll-row{ display:flex; align-items:center; gap:12px; padding:14px 0; border-top:1px solid var(--border); cursor:pointer; }
+    .payroll-row:first-child{ border-top:none; }
+    .payroll-avatar{ width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; color:#fff; flex-shrink:0; }
+    .payroll-name{ font-weight:700; font-size:13.5px; width:60px; flex-shrink:0; }
+    .payroll-base{ color:var(--muted); font-size:12px; flex:1; }
+    .payroll-net{ font-weight:800; font-size:14.5px; font-variant-numeric:tabular-nums; }
+    .payroll-caret{ color:var(--muted); font-size:11px; transition:transform .15s ease; }
+    .payroll-row.open .payroll-caret{ transform:rotate(180deg); }
+    .payroll-detail{ display:none; padding:2px 0 16px 0; }
+    .payroll-row.open + .payroll-detail{ display:block; }
+    .payroll-detail-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; }
+    .payroll-detail-item{ background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:9px 12px; }
+    .payroll-detail-item .k{ font-size:10.5px; color:var(--muted); margin-bottom:3px; }
+    .payroll-detail-item .v{ font-size:13px; font-weight:800; font-variant-numeric:tabular-nums; }
+    .payroll-detail-item.plus .v{ color:var(--good); }
+    .payroll-detail-item.minus .v{ color:var(--critical); }
+    .payroll-note{ margin-top:10px; color:var(--muted); font-size:11.5px; }
+
+    /* ---- settings cards ---- */
+    .settings-card{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:18px; margin-bottom:16px; }
+    .settings-card-title{ font-size:14px; font-weight:800; margin-bottom:4px; }
+    .settings-card-sub{ font-size:12px; color:var(--muted); margin-bottom:14px; line-height:1.6; }
+
+    .sched-row{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:12px 0; border-top:1px solid var(--border); }
+    .sched-row:first-child{ border-top:none; }
+    .sched-emp{ display:flex; align-items:center; gap:8px; width:100px; flex-shrink:0; font-weight:700; font-size:13px; }
+    .sched-emp .dot{ width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .sched-field{ display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--muted); }
+    .sched-field input, .sched-field select{
+      font-family:inherit; font-size:12.5px; padding:6px 8px; border-radius:7px; border:1px solid var(--border);
+      background:var(--bg); color:var(--ink); width:110px;
+    }
+    .sched-save{ padding:7px 14px; border-radius:7px; border:none; background:var(--accent); color:#fff; font-weight:700; font-size:12px; cursor:pointer; }
+
+    .fix-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 0; border-top:1px solid var(--border); flex-wrap:wrap; }
+    .fix-row:first-child{ border-top:none; }
+    .fix-info{ font-size:12.5px; }
+    .fix-info b{ font-weight:800; }
+    .fix-form{ display:none; width:100%; gap:8px; margin-top:10px; flex-wrap:wrap; }
+    .fix-form.open{ display:flex; }
+    .fix-form input[type="time"]{ font-family:inherit; padding:7px 10px; border-radius:7px; border:1px solid var(--border); background:var(--bg); color:var(--ink); }
+    .fix-form input[type="text"]{ flex:1; min-width:140px; font-family:inherit; padding:7px 10px; border-radius:7px; border:1px solid var(--border); background:var(--bg); color:var(--ink); }
+    .fix-btn{ padding:7px 12px; border-radius:7px; border:1px solid var(--border); background:var(--panel); color:var(--ink); font-weight:700; font-size:12px; cursor:pointer; }
+    .fix-btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+
+    .cov-row{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:12px 0; border-top:1px solid var(--border); }
+    .cov-row:first-child{ border-top:none; }
+    .cov-field{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--muted); }
+    .cov-field select, .cov-field input{ font-family:inherit; font-size:12.5px; padding:6px 8px; border-radius:7px; border:1px solid var(--border); background:var(--bg); color:var(--ink); width:110px; }
+
+    .admin-emp-badge{ font-size:10.5px; color:var(--muted); background:var(--bg); border:1px solid var(--border); padding:2px 8px; border-radius:6px; flex-shrink:0; }
+    .admin-add-row{ display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center; }
+    .admin-add-row input[type="text"]{ flex:1; min-width:160px; font-family:inherit; font-size:12.5px; padding:8px 10px; border-radius:7px; border:1px solid var(--border); background:var(--bg); color:var(--ink); }
+    .admin-add-row select{ font-family:inherit; font-size:12.5px; padding:8px 10px; border-radius:7px; border:1px solid var(--border); background:var(--bg); color:var(--ink); }
+    .admin-add-row label.chk{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink); flex-shrink:0; }
+    .admin-add-row button{ padding:8px 16px; border-radius:7px; border:none; background:var(--accent); color:#fff; font-weight:700; font-size:12.5px; cursor:pointer; }
+    .unf-row{ border-bottom:1px solid var(--border); padding:10px 0; }
+    .unf-row:last-child{ border-bottom:none; }
+    .unf-head{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .unf-title{ flex:1; min-width:160px; font-size:13.5px; }
+    .unf-when{ font-size:11.5px; opacity:.65; white-space:nowrap; }
+    .unf-panel{ display:none; margin-top:10px; background:rgba(0,0,0,.03); border-radius:8px; padding:10px; }
+    .unf-panel.open{ display:block; }
+    .unf-panel label{ display:block; font-size:11.5px; opacity:.7; margin:8px 0 5px; }
+    .unf-panel select, .unf-panel input[type=date]{ width:100%; padding:9px; border:1px solid var(--border); border-radius:7px; font-family:inherit; font-size:14px; }
+    .unf-quick{ display:flex; gap:6px; margin-bottom:6px; }
+    .unf-quick button{ flex:1; padding:8px 4px; border:1px solid var(--border); background:none; border-radius:7px; font-family:inherit; font-size:12.5px; cursor:pointer; color:inherit; }
+    .unf-confirm{ width:100%; margin-top:10px; padding:11px; border:none; border-radius:8px; background:var(--accent); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; }
+    .unf-msg{ font-size:12px; margin-top:6px; min-height:14px; opacity:.7; }
+    .unf-msg.err{ color:var(--critical); opacity:1; }
+
+    .admin-task-row{ display:flex; align-items:center; gap:8px; padding:8px 2px; border-top:1px solid var(--border); font-size:12.5px; flex-wrap:wrap; }
+    .admin-task-row:first-child{ border-top:none; }
+    .admin-task-title{ flex:1; }
+    .admin-task-title.inactive{ color:var(--muted); text-decoration:line-through; }
+    .admin-task-toggle, .admin-task-del{ background:none; border:none; font-size:12px; font-weight:700; cursor:pointer; padding:4px 8px; }
+    .admin-task-toggle{ color:var(--accent); }
+    .admin-task-del{ color:var(--critical); }
+    .admin-task-toggle:hover, .admin-task-del:hover{ text-decoration:underline; }
+
+    .sync-note{
+      text-align:center; font-size:11.5px; color:var(--muted); margin-top:18px; display:flex;
+      align-items:center; justify-content:center; gap:6px;
+    }
+    .sync-dot{ width:6px; height:6px; border-radius:50%; background:var(--good); }
+
+    footer.note{ text-align:center; margin-top:34px; font-size:12px; color:var(--muted); }
+
+    .toast{
+      position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px);
+      background:rgba(20,22,23,.92); color:#fff; font-size:13px; padding:10px 18px; border-radius:20px;
+      opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s ease; z-index:50; max-width:88vw; text-align:center;
+    }
+    .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+    .loading-line{ text-align:center; padding:20px; color:var(--muted); font-size:13px; }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="top">
+    <h1>لوحة المدير — متابعة وتحليل يومي</h1>
+    <p>وضع الفريق الآن، والتقارير، والرواتب — بيانات حقيقية محدّثة تلقائياً.</p>
+  </div>
+
+  <div class="dash">
+    <div class="dash-header">
+      <div class="office">مكتب كرم للسفر والنقل <span>لوحة المدير</span></div>
+      <div class="dash-date" id="dashDate">...</div>
+    </div>
+
+    <div class="view-tabs">
+      <button class="view-tab active" id="tabOverviewBtn" onclick="showView('overview')">نظرة عامة</button>
+      <button class="view-tab" id="tabSettingsBtn" onclick="showView('settings')">الإعدادات</button>
+    </div>
+
+    <div id="viewOverview">
+      <div class="stat-row">
+        <div class="stat-tile attend" onclick="openAttendModal()">
+          <div class="stat-ic">🟢</div>
+          <div><div class="stat-num" id="statAttend">–</div><div class="stat-label">حضروا اليوم</div></div>
+        </div>
+        <div class="stat-tile urgent" onclick="openUrgentModal()">
+          <div class="stat-ic">🔴</div>
+          <div><div class="stat-num" id="statUrgent">–</div><div class="stat-label">مهام عاجلة مفتوحة</div></div>
+        </div>
+        <div class="stat-tile reports" onclick="scrollToReportsFlash()">
+          <div class="stat-ic">📝</div>
+          <div><div class="stat-num" id="statReports">–</div><div class="stat-label">تقارير بانتظار مراجعتك</div></div>
+        </div>
+      </div>
+
+      <div class="section-title">الفريق اليوم</div>
+      <div class="emp-row" id="empRow"><div class="loading-line">جارِ التحميل...</div></div>
+
+      <div class="section-title">إضافة مهمة يومية</div>
+      <div class="settings-card">
+        <div class="settings-card-sub">مهمة لمرة واحدة تُضاف لتاريخ اليوم وتظهر فورًا عند الموظف. تُسجَّل باسم "المدير" فتتميّز عن مهام المشرف في التصنيف. أما المهام التي تتكرر كل يوم فمن تبويب الإعدادات.</div>
+        <div class="admin-add-row">
+          <select id="mgrTaskEmp"></select>
+          <input type="text" id="mgrTaskText" placeholder="مثال: متابعة شحنة العميل فلان">
+          <select id="mgrTaskPriority">
+            <option value="عادية">أولوية عادية</option>
+            <option value="عاجلة">أولوية عاجلة</option>
+          </select>
+          <button onclick="mgrAddDailyTask()">إضافة</button>
+        </div>
+        <div id="mgrTaskMsg" class="settings-card-sub" style="margin-top:6px;"></div>
+      </div>
+
+      <div class="section-title">تقارير بانتظار مراجعتك</div>
+      <div class="reports-card" id="reportsCard">
+        <div id="reportsList"><div class="loading-line">جارِ التحميل...</div></div>
+      </div>
+
+      <div class="section-title">الرواتب — ملخص الشهر الحالي حتى اليوم</div>
+      <div class="payroll-card" id="payrollCard"><div class="loading-line">جارِ التحميل...</div></div>
+
+      <div class="sync-note"><span class="sync-dot"></span> تحديث تلقائي كل 60 ثانية</div>
+    </div>
+
+    <div id="viewSettings" style="display:none;">
+      <div class="settings-card">
+        <div class="settings-card-title">🕓 الدوام والمواعيد</div>
+        <div class="settings-card-sub">ساعات الحضور والانصراف الرسمية لكل موظف، والحد الأدنى اليومي للساعات.</div>
+        <div id="scheduleList"><div class="loading-line">جارِ التحميل...</div></div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-card-title">💰 الرواتب الأساسية والمسحوبات</div>
+        <div class="settings-card-sub">الصافي = الراتب الأساسي − خصم الغياب (تلقائي) + بدل الجمعة (تلقائي) + بدل التغطية (تلقائي) − المسحوبات. المسحوبات تُدخل يدوياً لحين ربطها بنظام المكتب المالي لاحقاً.</div>
+        <div id="baseSalaryList"><div class="loading-line">جارِ التحميل...</div></div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-card-title">🛠️ التصحيح اليدوي</div>
+        <div class="settings-card-sub">جلسات حضور بدون انصراف من أيام سابقة — بحاجة لتصحيح يدوي منك.</div>
+        <div id="fixList"><div class="loading-line">جارِ التحميل...</div></div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-card-title">🔁 التغطية والجمعة</div>
+        <div class="settings-card-sub">مناوب الجمعة القادمة، وبدلات الجمعة والتغطية (تُحسب تلقائياً في الرواتب حسب الحضور الفعلي).</div>
+        <div id="coverageList"><div class="loading-line">جارِ التحميل...</div></div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-card-title">✅ إدارة المهام المتكررة</div>
+        <div class="settings-card-sub">المهام والفقرات المتكررة اليومية لكل موظف (تُحمَّل تلقائياً كل يوم في تقريره). هذا القسم للإضافة/الحذف/التفعيل فقط.</div>
+        <div class="admin-add-row">
+          <select id="adminTaskEmp"></select>
+          <input type="text" id="adminTaskText" placeholder="نص المهمة/الفقرة الجديدة...">
+          <select id="adminTaskType">
+            <option value="علامة">علامة (إنجاز/عدم إنجاز)</option>
+            <option value="عدد">رقم</option>
+            <option value="نص">نص حر</option>
+          </select>
+          <select id="adminTaskPriority">
+            <option value="عادية">أولوية عادية</option>
+            <option value="عاجلة">أولوية عاجلة</option>
+          </select>
+          <label class="chk"><input type="checkbox" id="adminTaskPhoto"> صورة اختيارية</label>
+          <button onclick="adminAddRecurringTask()">إضافة</button>
+        </div>
+        <div id="recurringTasksList"><div class="loading-line">جارِ التحميل...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="note">لوحة المدير — بيانات حيّة من نظام الحضور والانصراف الفعلي</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this) closeModal()">
+  <div class="modal-panel" id="modalPanel">
+    <div class="modal-head">
+      <div class="modal-title" id="modalTitle"></div>
+      <button class="modal-close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   لوحة المدير - الواجهة الكاملة - مربوطة بالكامل ببيانات حقيقية
+   عبر google.script.run (Manager.gs). لا توجد بيانات تجريبية هنا.
+   ============================================================ */
+
+var EMP_COLORS = ['var(--emp-c1)', 'var(--emp-c2)', 'var(--emp-c3)', 'var(--emp-c4)'];
+var overviewData = null;      // آخر نتيجة من getManagerOverviewData
+var employeesById = {};       // معرف -> بيانات الموظف (من overviewData)
+var employeeColorById = {};   // معرف -> لون الأفاتار
+var currentDetailEmpId = null;
+var currentDetailDate = null;
+var autoRefreshTimer = null;
+
+function escapeHtml(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function fmtNum(n){
+  var v = Number(n) || 0;
+  return v.toLocaleString('ar');
+}
+function initials(name){
+  return String(name || '؟').trim().charAt(0);
+}
+function roleLabelFor(emp){
+  return emp.shiftType === 'مرن' ? 'مشرف' : 'موظف';
+}
+function showToast(text){
+  var t = document.getElementById('toast');
+  t.textContent = text;
+  t.classList.add('show');
+  setTimeout(function () { t.classList.remove('show'); }, 2800);
+}
+function onServerError(err){
+  showToast('⚠️ خطأ: ' + (err && err.message ? err.message : err));
+}
+
+/* -------- إعادة إسناد مهمة من داخل بطاقة تفاصيل الموظف -------- */
+function isoAfterDays(n){
+  var d = new Date();
+  d.setDate(d.getDate() + n);
+  var mm = String(d.getMonth() + 1), dd = String(d.getDate());
+  if (mm.length < 2) mm = '0' + mm;
+  if (dd.length < 2) dd = '0' + dd;
+  return d.getFullYear() + '-' + mm + '-' + dd;
+}
+
+function unfToggle(id){
+  var p = document.getElementById('unfp-' + id);
+  if (p) p.classList.toggle('open');
+}
+
+function unfSetDate(id, days){
+  var el = document.getElementById('unfDate-' + id);
+  if (el) el.value = isoAfterDays(days);
+}
+
+function unfConfirm(taskId){
+  var empId = document.getElementById('unfEmp-' + taskId).value;
+  var date = document.getElementById('unfDate-' + taskId).value;
+  var msg = document.getElementById('unfMsg-' + taskId);
+  if (!empId || !date) { msg.className = 'unf-msg err'; msg.textContent = 'اختر الموظف والتاريخ'; return; }
+
+  msg.className = 'unf-msg';
+  msg.textContent = 'جارٍ الإسناد...';
+  google.script.run.withSuccessHandler(function (res) {
+    if (!res || res.success !== true) {
+      msg.className = 'unf-msg err';
+      msg.textContent = (res && res.error) ? res.error : 'تعذّر الإسناد';
+      return;
+    }
+    showToast('✅ أُسندت إلى ' + res.empName + ' بتاريخ ' + res.date);
+    }).withFailureHandler(function (err) {
+    msg.className = 'unf-msg err';
+    msg.textContent = (err && err.message) ? err.message : 'تعذّر الإسناد';
+  }).reassignTask({ taskId: taskId, empId: empId, date: date });
+}
+
+/* ============================================================
+   تبويب "نظرة عامة" مقابل "الإعدادات"
+   ============================================================ */
+function showView(view){
+  var isOverview = view === 'overview';
+  document.getElementById('viewOverview').style.display = isOverview ? '' : 'none';
+  document.getElementById('viewSettings').style.display = isOverview ? 'none' : '';
+  document.getElementById('tabOverviewBtn').classList.toggle('active', isOverview);
+  document.getElementById('tabSettingsBtn').classList.toggle('active', !isOverview);
+  if (!isOverview) {
+    loadSettingsTab();
+  }
+}
+
+/* ============================================================
+   تحميل النظرة العامة
+   ============================================================ */
+function loadOverview(){
+  fillMgrTaskEmployees();     // تملأ نفسها فورًا ومستقلة عن النظرة العامة
+  google.script.run.withSuccessHandler(renderOverview).withFailureHandler(onServerError).getManagerOverviewData();
+  google.script.run.withSuccessHandler(renderUrgentStat).withFailureHandler(function(){}).getUrgentOpenTasks();
+  loadReportsList();
+  loadPayroll();
+}
+
+function renderOverview(data){
+  overviewData = data;
+  employeesById = {};
+  employeeColorById = {};
+  data.employees.forEach(function (emp, idx) {
+    employeesById[emp.id] = emp;
+    employeeColorById[emp.id] = EMP_COLORS[idx % EMP_COLORS.length];
+  });
+
+  document.getElementById('dashDate').textContent = data.today;
+  document.getElementById('statAttend').textContent = data.presentCount + ' / ' + data.totalActive;
+
+  renderEmployeeCards(data.employees);
+}
+
+/**
+ * قائمة موظفي بطاقة "إضافة مهمة يومية".
+ * تُملأ من نداء خاص بها عند فتح الصفحة، فلا تعتمد على نجاح النظرة العامة،
+ * وتُحدَّث بعدها مع كل تحديث تلقائي (كل 60 ثانية) مع حفظ اختيار المدير
+ * الحالي حتى لا يُعاد ضبطه تحت يده وهو يكتب نص المهمة.
+ */
+/**
+ * مخزن واحد لقائمة الموظفين تشترك فيه كل بطاقات اللوحة.
+ * سبب وجوده: كل بطاقة كانت تبني قائمتها من overviewData، وهي لا تصل إلا
+ * بعد رد الخادم - فتخرج القائمة فارغة عند أول رسم. النداء هنا مستقل
+ * ويُخزَّن، فلا تتكرر المشكلة في أي بطاقة قادمة.
+ */
+var MGR_EMPS = [];
+function ensureEmployees(cb){
+  if (MGR_EMPS.length) { cb(MGR_EMPS); return; }
+  google.script.run
+    .withSuccessHandler(function (res) {
+      MGR_EMPS = (res && res.employees) ? res.employees : [];
+      cb(MGR_EMPS);
+    })
+    .withFailureHandler(function () { cb([]); })
+    .getActiveEmployeesForManager();
+}
+
+function empOptionsHtml(){
+  return MGR_EMPS.map(function (e) {
+    return '<option value="' + e.id + '">' + escapeHtml(e.name) + '</option>';
+  }).join('');
+}
+
+function fillMgrTaskEmployees(){
+  var sel = document.getElementById('mgrTaskEmp');
+  if (!sel) return;
+  ensureEmployees(function (list) {
+    if (!list.length) { sel.innerHTML = '<option value="">تعذّر تحميل الموظفين</option>'; return; }
+    var prev = sel.value;
+    sel.innerHTML = empOptionsHtml();
+    if (prev) sel.value = prev;
+  });
+}
+
+function renderUrgentStat(res){
+  document.getElementById('statUrgent').textContent = (res && res.tasks) ? res.tasks.length : 0;
+  window.__urgentTasks = (res && res.tasks) ? res.tasks : [];
+}
+
+function renderEmployeeCards(employees){
+  var html = employees.map(function (emp) {
+    var color = employeeColorById[emp.id];
+    var status = emp.status || { level: 'warning', text: '—' };
+    var stats = emp.taskStats || { today: { completed: 0, total: 0 }, week: [] };
+    var pct = stats.today.total > 0 ? Math.round((stats.today.completed / stats.today.total) * 100) : 0;
+
+    var alertsHtml = (emp.alerts || []).map(function (a) {
+      // تنبيه الجلسة المفتوحة يحمل زر تصحيح في مكانه - أسرع من فتح الإعدادات.
+      // بادئة 'ov-' لازمة: قائمة الإعدادات تستخدم نفس أرقام الصفوف، فبدونها
+      // يتكرر المعرّف في الصفحة ويصحّح الزر الجلسة الخطأ.
+      if (!a.fixRow) return '<div class="emp-alert ' + a.level + '">' + a.text + '</div>';
+      // وقت الحضور يُعرض ويُستخدم كحدٍّ أدنى للحقل: بدونه يُدخل المدير وقتًا
+      // أسبق منه فيُرفض التصحيح برسالة لا يعرف سببها.
+      // والقيمة الافتراضية نهاية دوام الموظف - أشيع وقت انصراف فعلي.
+      var ci = a.fixCheckIn || '';
+      var defOut = (emp.shiftEnd && ci && emp.shiftEnd > ci) ? emp.shiftEnd : '';
+      return '<div class="emp-alert ' + a.level + '">' + a.text +
+        (ci ? ' <span style="opacity:.8">(دخول ' + ci + ')</span>' : '') +
+        '<button class="fix-btn" onclick="event.stopPropagation(); toggleFixForm(' + a.fixRow + ', \'ov-\')">تصحيح</button>' +
+        '<div class="fix-form" id="ov-fixform-' + a.fixRow + '" onclick="event.stopPropagation();">' +
+          '<input type="time" id="ov-fixtime-' + a.fixRow + '"' +
+            (ci ? ' min="' + ci + '"' : '') + (defOut ? ' value="' + defOut + '"' : '') + '>' +
+          '<input type="text" id="ov-fixnote-' + a.fixRow + '" placeholder="سبب التصحيح (اختياري)">' +
+          '<button class="fix-btn primary" onclick="submitFix(' + a.fixRow + ', \'ov-\')">حفظ التصحيح</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    var weekVals = (stats.week || []).map(function (d) { return d.total > 0 ? d.completed : 0; });
+    var maxVal = Math.max.apply(null, weekVals.concat([1]));
+    var barsHtml = weekVals.map(function (v) {
+      var h = Math.max(3, Math.round((v / maxVal) * 38));
+      return '<div class="emp-bar" style="height:' + h + 'px; background:' + color + ';" title="' + v + ' مهمة"></div>';
+    }).join('');
+    var dayLabels = (stats.week || []).map(function (d) {
+      var dow = new Date(d.date + 'T00:00:00').getDay();
+      return ['ح','ن','ث','ر','خ','ج','س'][dow];
+    });
+
+    return '<div class="emp-card">' +
+      '<div class="emp-top">' +
+        '<div class="emp-avatar" style="background:' + color + ';">' + escapeHtml(initials(emp.name)) + '</div>' +
+        '<div><div class="emp-name">' + escapeHtml(emp.name) + '</div><div class="emp-role">' + roleLabelFor(emp) + '</div></div>' +
+      '</div>' +
+      '<div class="emp-status ' + status.level + '">' + status.text + '</div>' +
+      '<div class="emp-tasks-line">' + stats.today.completed + ' من ' + stats.today.total + ' مهام مكتملة اليوم</div>' +
+      '<div class="emp-progress"><div class="emp-progress-fill" style="width:' + pct + '%; background:' + color + ';"></div></div>' +
+      alertsHtml +
+      '<div class="emp-chart-label">آخر 7 أيام — مهام منجزة يومياً</div>' +
+      '<div class="emp-chart">' + barsHtml + '</div>' +
+      '<div class="emp-chart-days">' + dayLabels.map(function (d) { return '<span>' + d + '</span>'; }).join('') + '</div>' +
+      '<button class="emp-detail-btn" onclick="openEmployeeDetail(\'' + emp.id + '\')">عرض التفاصيل</button>' +
+    '</div>';
+  }).join('');
+  document.getElementById('empRow').innerHTML = html || '<div class="loading-line">لا يوجد موظفون نشطون</div>';
+}
+
+/* ============================================================
+   تفاصيل يوم موظف (نافذة منبثقة)
+   ============================================================ */
+var CATEGORY_ORDER = ['من المدير', 'من المشرف', 'دورية', 'أضافها بنفسه', 'مرحّلة', 'أخرى'];
+var CATEGORY_LABELS = {
+  'من المدير': 'مهام مسندة من المدير',
+  'من المشرف': 'مهام من المشرف',
+  'دورية': 'مهام دورية',
+  'أضافها بنفسه': 'مهام أضافها بنفسه',
+  'مرحّلة': 'مهام مرحّلة',
+  'أخرى': 'مهام أخرى'
+};
+
+function openEmployeeDetail(empId, dateStr){
+  currentDetailEmpId = empId;
+  currentDetailDate = dateStr || (overviewData ? overviewData.today : null);
+  var emp = employeesById[empId] || { name: '...', id: empId };
+  document.getElementById('modalTitle').textContent = 'تفاصيل اليوم — ' + emp.name;
+  document.getElementById('modalBody').innerHTML = '<div class="loading-line">جارِ التحميل...</div>';
+  showModal();
+  google.script.run.withSuccessHandler(renderEmployeeDetail).withFailureHandler(onServerError)
+    .getEmployeeDayDetail(empId, currentDetailDate);
+}
+
+function attendanceSummaryText(attendance){
+  if (!attendance || !attendance.length) return '🔴 لم يسجّل حضوره بعد';
+  var totalHours = 0;
+  attendance.forEach(function (a) { totalHours += Number(a.durationHours) || 0; });
+  totalHours = Math.round(totalHours * 100) / 100;
+  var parts = attendance.map(function (a) {
+    return 'دخول ' + (a.checkIn || '—') + (a.checkOut ? ' — خروج ' + a.checkOut : ' (جلسة مفتوحة)');
+  });
+  return '🟢 ' + parts.join(' | ') + (totalHours ? ' — إجمالي ' + totalHours + ' ساعة' : '');
+}
+
+/**
+ * هل تقبل هذه المهمة إعادة الإسناد؟
+ * القاعدة معلّقة على "من أضافها" لا على التصنيف الظاهر، لأن مهمة أضافها
+ * المدير ثم رُحّلت يتحول تصنيفها إلى "مرحّلة" فتفقد الزر بلا سبب.
+ *  - الدورية (نظام تلقائي): لا تُسند إطلاقًا - تتولد وحدها كل يوم.
+ *  - ما أضافه الموظف لنفسه: شأنه، لا يُعاد إسناده من هنا.
+ *  - المنجزة: لا معنى لإسنادها.
+ * فيبقى ما أضافه المدير أو المشرف وحده، وهو المطلوب.
+ */
+function canReassign(t, empName){
+  if (t.completed) return false;
+  var by = String(t.addedBy || '').trim();
+  if (!by || by === 'نظام تلقائي') return false;
+  return by !== String(empName || '').trim();
+}
+
+function reassignPanelHtml(t){
+  return '<button class="admin-task-toggle" onclick="event.stopPropagation(); unfToggle(\'' + t.id + '\')">إعادة إسناد</button>' +
+    '<div class="unf-panel" id="unfp-' + t.id + '" style="flex-basis:100%;">' +
+      '<label>الموظف</label>' +
+      '<select id="unfEmp-' + t.id + '">' + empOptionsHtml() + '</select>' +
+      '<label>تاريخ الإنجاز</label>' +
+      '<div class="unf-quick">' +
+        '<button onclick="unfSetDate(\'' + t.id + '\',0)">اليوم</button>' +
+        '<button onclick="unfSetDate(\'' + t.id + '\',1)">غدًا</button>' +
+      '</div>' +
+      '<input type="date" id="unfDate-' + t.id + '" min="' + isoAfterDays(0) + '" value="' + isoAfterDays(0) + '">' +
+      '<button class="unf-confirm" onclick="unfConfirm(\'' + t.id + '\')">تأكيد الإسناد</button>' +
+      '<div class="unf-msg" id="unfMsg-' + t.id + '"></div>' +
+    '</div>';
+}
+
+function taskRowHtml(t, empName){
+  var photoBit = '';
+  if (t.photoOptional) {
+    if (t.photoUrl) {
+      photoBit = '<button class="detail-photo-btn" onclick="event.stopPropagation(); toggleDetailPhoto(\'' + t.id + '\')">📷 عرض الصورة</button>' +
+        '<img src="' + t.photoUrl + '" class="detail-photo-preview" id="photo-' + t.id + '" style="display:none;">';
+    } else {
+      photoBit = '<span class="detail-task-note">📷 صورة اختيارية — لم تُرفق</span>';
+    }
+  }
+  return '<div class="detail-task' + (t.completed ? ' done' : '') + '">' +
+    '<span class="detail-task-check">' + (t.completed ? '✅' : '⬜') + '</span>' +
+    '<span class="detail-task-title">' + escapeHtml(t.task) +
+      (t.value !== '' && t.value != null ? ' — <b>' + escapeHtml(t.value) + '</b>' : '') + '</span>' +
+    (t.priority === 'عاجلة' && !t.completed ? '<span class="detail-task-urgent">عاجل</span>' : '') +
+    photoBit +
+    (t.notes ? '<div style="flex-basis:100%; font-size:11px; color:var(--muted); white-space:pre-line;">' + escapeHtml(t.notes) + '</div>' : '') +
+    (canReassign(t, empName) ? reassignPanelHtml(t) : '') +
+  '</div>';
+}
+function toggleDetailPhoto(taskId){
+  var img = document.getElementById('photo-' + taskId);
+  if (img) img.style.display = img.style.display === 'none' ? 'block' : 'none';
+}
+
+function renderEmployeeDetail(res){
+  if (!res || !res.success) { document.getElementById('modalBody').innerHTML = '<div class="modal-empty">تعذّر تحميل التفاصيل</div>'; return; }
+  // لا نرسم قبل وصول قائمة الموظفين، وإلا خرجت قائمة الإسناد فارغة
+  ensureEmployees(function () { drawEmployeeDetail(res); });
+}
+
+function drawEmployeeDetail(res){
+
+  var emp = employeesById[res.empId] || { name: res.empName, id: res.empId };
+  var color = employeeColorById[res.empId] || EMP_COLORS[0];
+
+  var byCategory = {};
+  (res.tasks || []).forEach(function (t) {
+    var cat = CATEGORY_ORDER.indexOf(t.category) === -1 ? 'أخرى' : t.category;
+    if (!byCategory[cat]) byCategory[cat] = [];
+    byCategory[cat].push(t);
+  });
+
+  var catsHtml = CATEGORY_ORDER.map(function (cat) {
+    var tasks = byCategory[cat];
+    if (!tasks || !tasks.length) return '';
+    var doneCount = tasks.filter(function (t) { return t.completed; }).length;
+    var hasOpenUrgentOrPostponed = tasks.some(function (t) { return !t.completed; }) &&
+      (cat === 'مرحّلة' || tasks.some(function (t) { return t.priority === 'عاجلة' && !t.completed; }));
+    return '<div class="detail-cat' + (hasOpenUrgentOrPostponed ? ' warn' : '') + '">' +
+      '<div class="detail-cat-head"><span>' + CATEGORY_LABELS[cat] + '</span><span class="detail-cat-count">' + doneCount + ' من ' + tasks.length + '</span></div>' +
+      tasks.map(function (t) { return taskRowHtml(t, emp.name); }).join('') +
+    '</div>';
+  }).join('');
+
+  var html = '<div class="detail-top">' +
+    '<div class="detail-avatar" style="background:' + color + ';">' + escapeHtml(initials(emp.name)) + '</div>' +
+    '<div><div class="detail-name">' + escapeHtml(emp.name) + '</div><div class="detail-role">' + roleLabelFor(emp) + ' — ' + res.date + '</div></div>' +
+  '</div>' +
+  '<div class="detail-attend">' + attendanceSummaryText(res.attendance) + '</div>' +
+  '<div class="detail-cats-label">ملخص المهام حسب المصدر</div>' +
+  (catsHtml || '<div class="modal-empty">لا توجد مهام مسجّلة لهذا اليوم</div>') +
+  '<div class="detail-note-box">' +
+    '<label>ملاحظتك — تتحول تلقائياً لمهمة جديدة في «مهامي اليومية» الخاصة بـ' + escapeHtml(emp.name) + '، ويُسجَّل هذا اليوم كمُراجَع</label>' +
+    '<div class="report-note-row">' +
+      '<input type="text" id="detailNoteInput" placeholder="اكتب ملاحظتك (اختياري)...">' +
+      '<button onclick="sendDetailNote()">مراجعة وإرسال</button>' +
+    '</div>' +
+  '</div>';
+
+  document.getElementById('modalBody').innerHTML = html;
+}
+
+function sendDetailNote(){
+  var input = document.getElementById('detailNoteInput');
+  var note = input ? input.value.trim() : '';
+  var btn = event && event.target;
+  if (btn) btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function () {
+      showToast(note ? '✅ تم إرسال الملاحظة — أُضيفت كمهمة جديدة، وتم تسجيل اليوم كمُراجَع' : '✅ تم تسجيل اليوم كمُراجَع');
+      closeModal();
+      loadReportsList();
+    })
+    .withFailureHandler(function (err) { if (btn) btn.disabled = false; onServerError(err); })
+    .reviewEmployeeDay({ empId: currentDetailEmpId, date: currentDetailDate, note: note });
+}
+
+function openAttendModal(){
+  if (!overviewData) return;
+  document.getElementById('modalTitle').textContent = 'حضور اليوم';
+  var html = overviewData.employees.map(function (emp) {
+    var color = employeeColorById[emp.id];
+    var status = emp.status || { text: '—' };
+    return '<div class="modal-list-row" onclick="closeModal(); openEmployeeDetail(\'' + emp.id + '\')">' +
+      '<div class="modal-list-avatar" style="background:' + color + ';">' + escapeHtml(initials(emp.name)) + '</div>' +
+      '<div class="modal-list-name">' + escapeHtml(emp.name) + '</div>' +
+      '<div class="modal-list-info">' + status.text + '</div>' +
+    '</div>';
+  }).join('');
+  document.getElementById('modalBody').innerHTML = html;
+  showModal();
+}
+
+function openUrgentModal(){
+  document.getElementById('modalTitle').textContent = 'المهام العاجلة المفتوحة';
+  var tasks = window.__urgentTasks || [];
+  var html;
+  if (!tasks.length) {
+    html = '<div class="modal-empty">✅ لا توجد مهام عاجلة مفتوحة حالياً</div>';
+  } else {
+    html = tasks.map(function (t) {
+      var color = employeeColorById[t.empId] || EMP_COLORS[0];
+      return '<div class="modal-list-row" onclick="closeModal(); openEmployeeDetail(\'' + t.empId + '\', \'' + t.date + '\')">' +
+        '<div class="modal-list-avatar" style="background:' + color + ';">' + escapeHtml(initials(t.empName)) + '</div>' +
+        '<div class="modal-list-name">' + escapeHtml(t.empName) + '</div>' +
+        '<div class="modal-list-info">' + escapeHtml(t.task) + ' — ' + t.date + '</div>' +
+      '</div>';
+    }).join('');
+  }
+  document.getElementById('modalBody').innerHTML = html;
+  showModal();
+}
+
+function scrollToReportsFlash(){
+  var card = document.getElementById('reportsCard');
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  card.classList.remove('flash');
+  void card.offsetWidth;
+  card.classList.add('flash');
+  setTimeout(function () { card.classList.remove('flash'); }, 1900);
+}
+
+function showModal(){ document.getElementById('modalOverlay').classList.add('show'); }
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('show'); }
+document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') closeModal(); });
+
+/* ============================================================
+   تقارير بانتظار المراجعة
+   ============================================================ */
+function loadReportsList(){
+  google.script.run.withSuccessHandler(renderReportsList).withFailureHandler(function(){}).getPendingReviewReports();
+}
+function renderReportsList(res){
+  var reports = (res && res.reports) ? res.reports : [];
+  document.getElementById('statReports').textContent = reports.length;
+  var listEl = document.getElementById('reportsList');
+  if (!reports.length) {
+    listEl.innerHTML = '<div class="reports-empty">✅ لا توجد تقارير بانتظار المراجعة حالياً</div>';
+    return;
+  }
+  listEl.innerHTML = reports.map(function (r) {
+    return '<div class="report-item">' +
+      '<div class="report-item-head">' +
+        '<div class="report-item-title">تقرير ' + escapeHtml(r.empName) + ' — ' + r.date + '</div>' +
+        '<div class="report-item-badge">غير مُراجَع</div>' +
+      '</div>' +
+      '<button class="report-review-btn" onclick="openEmployeeDetail(\'' + r.empId + '\', \'' + r.date + '\')">فتح ومراجعة التفاصيل</button>' +
+      '<div class="report-caption">تفتح تفاصيل يومه كاملة (الحضور + المهام مصنّفة) — ملاحظتك هناك تتحول تلقائياً لمهمة جديدة في «مهامي اليومية» الخاصة به.</div>' +
+    '</div>';
+  }).join('');
+}
+
+/* ============================================================
+   الرواتب — ملخص الشهر الحالي (بيانات حيّة حقيقية)
+   ============================================================ */
+var lastPayrollData = null;
+function loadPayroll(){
+  google.script.run.withSuccessHandler(function (res) { lastPayrollData = res; renderPayroll(res); })
+    .withFailureHandler(onServerError).getPayrollSummary();
+}
+function renderPayroll(res){
+  if (!res || !res.success) { document.getElementById('payrollCard').innerHTML = '<div class="loading-line">تعذّر تحميل بيانات الرواتب</div>'; return; }
+  var currency = res.currency || 'ريال';
+  var html = res.employees.map(function (p) {
+    var color = employeeColorById[p.id] || EMP_COLORS[0];
+    var pendingNote = p.pendingDays > 0
+      ? '<div class="payroll-note">⚠️ ' + p.pendingDays + ' يوم فيه جلسة حضور مفتوحة (بدون انصراف) لم تُحتسب بعد — راجع «التصحيح اليدوي».</div>' : '';
+    return '<div class="payroll-row" id="prow-' + p.id + '" onclick="togglePayrollRow(\'' + p.id + '\')">' +
+      '<div class="payroll-avatar" style="background:' + color + ';">' + escapeHtml(initials(p.name)) + '</div>' +
+      '<div class="payroll-name">' + escapeHtml(p.name) + '</div>' +
+      '<div class="payroll-base">أساسي ' + fmtNum(p.baseSalary) + ' ' + currency + '</div>' +
+      '<div class="payroll-net">' + fmtNum(p.netSalary) + ' ' + currency + '</div>' +
+      '<div class="payroll-caret">▾</div>' +
+    '</div>' +
+    '<div class="payroll-detail">' +
+      '<div class="payroll-detail-grid">' +
+        '<div class="payroll-detail-item"><div class="k">أيام الحضور</div><div class="v">' + p.attendanceDays + '</div></div>' +
+        '<div class="payroll-detail-item minus"><div class="k">أيام الغياب</div><div class="v">' + p.absenceDays + '</div></div>' +
+        '<div class="payroll-detail-item minus"><div class="k">خصم الغياب</div><div class="v">-' + fmtNum(p.absenceDeduction) + '</div></div>' +
+        '<div class="payroll-detail-item plus"><div class="k">بدل الجمعة (' + p.fridayCount + ' جمعة)</div><div class="v">+' + fmtNum(p.fridayAllowance) + '</div></div>' +
+        '<div class="payroll-detail-item plus"><div class="k">بدل التغطية (' + p.coverageHours + ' ساعة)</div><div class="v">+' + fmtNum(p.coverageAmount) + '</div></div>' +
+        '<div class="payroll-detail-item minus"><div class="k">المسحوبات</div><div class="v">-' + fmtNum(p.withdrawal) + '</div></div>' +
+      '</div>' + pendingNote +
+    '</div>';
+  }).join('');
+  document.getElementById('payrollCard').innerHTML = html || '<div class="loading-line">لا يوجد موظفون</div>';
+}
+function togglePayrollRow(id){
+  var row = document.getElementById('prow-' + id);
+  var wasOpen = row.classList.contains('open');
+  document.querySelectorAll('.payroll-row.open').forEach(function (r) { r.classList.remove('open'); });
+  if (!wasOpen) row.classList.add('open');
+}
+
+/* ============================================================
+   تبويب الإعدادات — يُحمَّل عند أول فتح للتبويب في كل مرة
+   ============================================================ */
+function loadSettingsTab(){
+  renderSchedule();
+  renderBaseSalary();
+  loadFixList();
+  renderCoverage();
+  loadRecurringAdmin();
+}
+
+function renderSchedule(){
+  if (!overviewData) { return; }
+  var html = overviewData.employees.map(function (emp) {
+    var color = employeeColorById[emp.id];
+    var timeFields = emp.shiftType === 'ثابت'
+      ? '<div class="sched-field"><span>بداية الدوام</span><input type="time" id="sch-start-' + emp.id + '" value="' + (emp.shiftStart || '') + '"></div>' +
+        '<div class="sched-field"><span>نهاية الدوام</span><input type="time" id="sch-end-' + emp.id + '" value="' + (emp.shiftEnd || '') + '"></div>'
+      : '<div class="sched-field"><span>نوع الدوام</span><input type="text" value="مرن (بدون وقت محدد)" disabled style="width:150px; opacity:.7;"></div>';
+    return '<div class="sched-row">' +
+      '<div class="sched-emp"><span class="dot" style="background:' + color + ';"></span>' + escapeHtml(emp.name) + '</div>' +
+      timeFields +
+      '<div class="sched-field"><span>الحد الأدنى اليومي (ساعة)</span><input type="number" step="0.5" id="sch-min-' + emp.id + '" value="' + (emp.minDailyHours || 0) + '" style="width:70px;"></div>' +
+      '<button class="sched-save" onclick="saveSchedule(\'' + emp.id + '\')">حفظ</button>' +
+    '</div>';
+  }).join('');
+  document.getElementById('scheduleList').innerHTML = html;
+}
+function saveSchedule(empId){
+  var emp = employeesById[empId];
+  var payload = { id: empId };
+  var startEl = document.getElementById('sch-start-' + empId);
+  var endEl = document.getElementById('sch-end-' + empId);
+  if (startEl) payload.shiftStart = startEl.value;
+  if (endEl) payload.shiftEnd = endEl.value;
+  var minEl = document.getElementById('sch-min-' + empId);
+  if (minEl) payload.minDailyHours = minEl.value;
+  google.script.run.withSuccessHandler(function () {
+    showToast('✅ تم حفظ إعدادات الدوام لـ' + (emp ? emp.name : ''));
+    loadOverview();
+  }).withFailureHandler(onServerError).updateEmployeeDetails(payload);
+}
+
+function renderBaseSalary(){
+  if (!overviewData) return;
+  var withdrawals = {};
+  if (lastPayrollData && lastPayrollData.employees) {
+    lastPayrollData.employees.forEach(function (p) { withdrawals[p.id] = p.withdrawal; });
+  }
+  var html = overviewData.employees.map(function (emp) {
+    var color = employeeColorById[emp.id];
+    var wd = withdrawals[emp.id] || 0;
+    return '<div class="sched-row">' +
+      '<div class="sched-emp"><span class="dot" style="background:' + color + ';"></span>' + escapeHtml(emp.name) + '</div>' +
+      '<div class="sched-field"><span>الراتب الأساسي</span><input type="number" id="basesal-' + emp.id + '" value="' + emp.baseSalary + '" style="width:120px;"></div>' +
+      '<div class="sched-field"><span>المسحوبات هذا الشهر</span><input type="number" id="basewithdraw-' + emp.id + '" value="' + wd + '" style="width:110px;"></div>' +
+      '<button class="sched-save" onclick="saveBaseSalary(\'' + emp.id + '\')">حفظ</button>' +
+    '</div>';
+  }).join('');
+  document.getElementById('baseSalaryList').innerHTML = html;
+}
+function saveBaseSalary(empId){
+  var emp = employeesById[empId];
+  var baseVal = parseFloat(document.getElementById('basesal-' + empId).value);
+  var wdVal = parseFloat(document.getElementById('basewithdraw-' + empId).value);
+  if (isNaN(baseVal) || baseVal < 0 || isNaN(wdVal) || wdVal < 0) { showToast('⚠️ أدخل أرقاماً صحيحة'); return; }
+  google.script.run.withSuccessHandler(function () {
+    showToast('✅ تم تحديث الراتب والمسحوبات لـ' + (emp ? emp.name : ''));
+    loadPayroll();
+  }).withFailureHandler(onServerError).saveEmployeeSalaryAndWithdrawal({ empId: empId, baseSalary: baseVal, withdrawal: wdVal });
+}
+
+function loadFixList(){
+  google.script.run.withSuccessHandler(renderFixList).withFailureHandler(onServerError).getPendingFixSessions();
+}
+function renderFixList(res){
+  var sessions = (res && res.sessions) ? res.sessions : [];
+  var listEl = document.getElementById('fixList');
+  if (!sessions.length) {
+    listEl.innerHTML = '<div class="modal-empty">✅ لا توجد جلسات بحاجة لتصحيح حالياً</div>';
+    return;
+  }
+  listEl.innerHTML = sessions.map(function (s) {
+    return '<div class="fix-row">' +
+      '<div class="fix-info"><b>' + escapeHtml(s.empName) + '</b> — نسي تسجيل الانصراف بتاريخ ' + s.date + ' (دخول ' + (s.checkIn || '—') + ')</div>' +
+      '<button class="fix-btn" onclick="toggleFixForm(' + s.row + ')">تصحيح</button>' +
+      '<div class="fix-form" id="fixform-' + s.row + '">' +
+        '<input type="time" id="fixtime-' + s.row + '">' +
+        '<input type="text" id="fixnote-' + s.row + '" placeholder="سبب التصحيح (اختياري)">' +
+        '<button class="fix-btn primary" onclick="submitFix(' + s.row + ')">حفظ التصحيح</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+function toggleFixForm(row, pfx){
+  pfx = pfx || '';
+  document.getElementById(pfx + 'fixform-' + row).classList.toggle('open');
+}
+function submitFix(row, pfx){
+  pfx = pfx || '';
+  var timeVal = document.getElementById(pfx + 'fixtime-' + row).value;
+  var note = document.getElementById(pfx + 'fixnote-' + row).value;
+  if (!timeVal) { showToast('⚠️ حدد وقت الانصراف أولاً'); return; }
+  google.script.run.withSuccessHandler(function () {
+    showToast('✅ تم تصحيح الجلسة — الانصراف ' + timeVal);
+    // من بطاقة الموظف نحدّث النظرة العامة كي يختفي التنبيه فورًا
+    if (pfx) loadOverview(); else loadFixList();
+    loadPayroll();
+  }).withFailureHandler(onServerError).fixOpenSession({ row: row, checkOutTime: timeVal, note: note });
+}
+
+function renderCoverage(){
+  if (!overviewData) return;
+  var d = overviewData;
+  var nonSupervisor = d.employees.filter(function (e) { return e.shiftType !== 'مرن'; });
+  var options = nonSupervisor.map(function (e) {
+    return '<option value="' + escapeHtml(e.name) + '"' + (e.name === d.fridayThisWeekWorker ? ' selected' : '') + '>' + escapeHtml(e.name) + '</option>';
+  }).join('');
+  var nextInfo = d.fridayNext ? ('الجمعة القادمة: ' + d.fridayNext.date + (d.fridayNext.worker ? ' — دور ' + escapeHtml(d.fridayNext.worker) : '')) : '';
+
+  var html =
+    '<div class="settings-card-sub" style="margin-bottom:10px; font-weight:800; color:var(--ink);">' + nextInfo + '</div>' +
+    '<div class="cov-row">' +
+      '<div class="cov-field">مناوب هذا الأسبوع <select id="fri-worker">' + options + '</select></div>' +
+      '<button class="sched-save" onclick="saveFridayWorker()">حفظ</button>' +
+    '</div>' +
+    '<div class="cov-row">' +
+      '<div class="cov-field">بدل الجمعة (لكل جمعة عمل) <input type="number" id="fri-allowance" value="' + (d.fridayAllowance || 0) + '"></div>' +
+      '<button class="sched-save" onclick="saveFridayAllowance()">حفظ</button>' +
+    '</div>' +
+    '<div class="cov-row">' +
+      '<div class="cov-field">بدل التغطية الكامل (إعداد عام) <input type="number" id="cov-allowance" value="' + (d.coverageAllowance || 0) + '"></div>' +
+      '<button class="sched-save" onclick="saveCoverageAllowance()">حفظ</button>' +
+    '</div>' +
+    '<div class="cov-row">' +
+      '<div class="cov-field">دوام الجمعة المستقل: من <input type="time" id="fri-shift-start" value="' + (d.fridayShiftStart || '18:00') + '"> إلى <input type="time" id="fri-shift-end" value="' + (d.fridayShiftEnd || '22:00') + '"></div>' +
+      '<button class="sched-save" onclick="saveFridayShift()">حفظ</button>' +
+    '</div>';
+  document.getElementById('coverageList').innerHTML = html;
+}
+function saveFridayWorker(){
+  var val = document.getElementById('fri-worker').value;
+  google.script.run.withSuccessHandler(function () {
+    showToast('✅ تم حفظ مناوب الجمعة');
+    loadOverview();
+  }).withFailureHandler(onServerError).updateGlobalSettings({ fridayWorkerThisWeek: val });
+}
+function saveFridayAllowance(){
+  var val = parseFloat(document.getElementById('fri-allowance').value);
+  if (isNaN(val) || val < 0) { showToast('⚠️ أدخل رقماً صحيحاً'); return; }
+  google.script.run.withSuccessHandler(function () {
+    showToast('✅ تم تحديث بدل الجمعة');
+    loadOverview();
+  }).withFailureHandler(onServerError).updateGlobalSettings({ fridayAllowance: val });
+}
+function saveCoverageAllowance(){
+  var val = parseFloat(document.getElementById('cov-allowance').value);
+  if (isNaN(val) || val < 0) { showToast('⚠️ أدخل رقماً صحيحاً'); return; }
+  google.script.run.withSuccessHandler(function () {
+    showToast('✅ تم تحديث بدل التغطية');
+    loadOverview();
+  }).withFailureHandler(onServerError).updateGlobalSettings({ coverageAllowance: val });
+}
+function saveFridayShift(){
+  var startVal = document.getElementById('fri-shift-start').value;
+  var endVal = document.getElementById('fri-shift-end').value;
+  if (!startVal || !endVal) { showToast('⚠️ حدد وقت البداية والنهاية'); return; }
+  google.script.run.withSuccessHandler(function () {
+    showToast('✅ تم تحديث دوام الجمعة');
+    loadOverview();
+  }).withFailureHandler(onServerError).updateGlobalSettings({ fridayShiftStart: startVal, fridayShiftEnd: endVal });
+}
+
+/* ============================================================
+   إدارة المهام المتكررة (أدمن)
+   ============================================================ */
+function loadRecurringAdmin(){
+  if (overviewData) {
+    var sel = document.getElementById('adminTaskEmp');
+    sel.innerHTML = overviewData.employees.map(function (e) {
+      return '<option value="' + e.id + '">' + escapeHtml(e.name) + '</option>';
+    }).join('');
+  }
+  google.script.run.withSuccessHandler(renderRecurringAdmin).withFailureHandler(onServerError).getRecurringTasksAdmin();
+}
+function renderRecurringAdmin(res){
+  var items = (res && res.items) ? res.items : [];
+  var listEl = document.getElementById('recurringTasksList');
+  if (!items.length) {
+    listEl.innerHTML = '<div class="modal-empty">لا توجد مهام متكررة حالياً</div>';
+    return;
+  }
+  listEl.innerHTML = items.map(function (it) {
+    return '<div class="admin-task-row">' +
+      '<span class="admin-emp-badge">' + escapeHtml(it.empName) + '</span>' +
+      '<span class="admin-task-title' + (it.active ? '' : ' inactive') + '">' + escapeHtml(it.text) + (it.photoOptional ? ' 📷' : '') + (it.priority === 'عاجلة' ? ' 🔴' : '') + '</span>' +
+      '<button class="admin-task-toggle" onclick="adminToggleRecurring(' + it.row + ')">' + (it.active ? 'تعطيل' : 'تفعيل') + '</button>' +
+      '<button class="admin-task-del" onclick="adminDeleteRecurring(' + it.row + ')">حذف</button>' +
+    '</div>';
+  }).join('');
+}
+function mgrAddDailyTask(){
+  var empId = document.getElementById('mgrTaskEmp').value;
+  var textEl = document.getElementById('mgrTaskText');
+  var text = textEl.value.trim();
+  var priority = document.getElementById('mgrTaskPriority').value;
+  var msgEl = document.getElementById('mgrTaskMsg');
+  if (!empId) { showToast('⚠️ اختر الموظف أولاً'); return; }
+  if (!text) { showToast('⚠️ اكتب نص المهمة أولاً'); return; }
+  if (msgEl) msgEl.textContent = 'جارٍ الإضافة...';
+  google.script.run.withSuccessHandler(function (res) {
+    if (!res || res.success !== true) {
+      if (msgEl) msgEl.textContent = '';
+      showToast('⚠️ ' + ((res && res.error) ? res.error : 'تعذّرت الإضافة'));
+      return;
+    }
+    textEl.value = '';
+    if (msgEl) msgEl.textContent = 'أُضيفت مهمة اليوم بنجاح.';
+    showToast('✅ أُضيفت مهمة اليوم');
+  }).withFailureHandler(function (err) {
+    if (msgEl) msgEl.textContent = '';
+    onServerError(err);
+  }).addManagerDailyTask({ empId: empId, text: text, priority: priority });
+}
+
+function adminAddRecurringTask(){
+  var empId = document.getElementById('adminTaskEmp').value;
+  var textEl = document.getElementById('adminTaskText');
+  var text = textEl.value.trim();
+  var inputType = document.getElementById('adminTaskType').value;
+  var priority = document.getElementById('adminTaskPriority').value;
+  var photoOptional = document.getElementById('adminTaskPhoto').checked;
+  if (!text) { showToast('⚠️ اكتب نص المهمة أولاً'); return; }
+  google.script.run.withSuccessHandler(function () {
+    textEl.value = '';
+    document.getElementById('adminTaskPhoto').checked = false;
+    showToast('✅ أُضيفت مهمة متكررة جديدة');
+    loadRecurringAdmin();
+  }).withFailureHandler(onServerError).addRecurringTaskFull({ empId: empId, text: text, inputType: inputType, priority: priority, photoOptional: photoOptional });
+}
+function adminToggleRecurring(row){
+  google.script.run.withSuccessHandler(function () { loadRecurringAdmin(); }).withFailureHandler(onServerError).toggleRecurringTaskActive(row);
+}
+function adminDeleteRecurring(row){
+  google.script.run.withSuccessHandler(function () {
+    showToast('🗑️ تم حذف البند نهائياً');
+    loadRecurringAdmin();
+  }).withFailureHandler(onServerError).deleteRecurringTaskTemplate(row);
+}
+
+/* ============================================================
+   بدء التشغيل + تحديث تلقائي
+   ============================================================ */
+loadOverview();
+autoRefreshTimer = setInterval(function () {
+  var overlayShown = document.getElementById('modalOverlay').classList.contains('show');
+  if (!overlayShown) loadOverview();
+}, 60000);
+</script>
+
+</body>
+</html>
